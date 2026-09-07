@@ -16,7 +16,7 @@ export class Scanner {
   update(state) {
     this.stop();
     this.state = state;
-    if (!state.enabled || !state.profiles.some(p => p.enabled && (p.positiveKeywords.length || p.negativeKeywords.length))) return;
+    if (!state.enabled || !state.profiles.some(p => p.enabled && (p.positiveKeywords.length || p.negativeKeywords.length || p.rules?.criteria?.length))) return;
     this.observer.observe(this.doc.documentElement, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class', 'style', 'hidden', 'open', 'aria-hidden', 'contenteditable', 'inert'] });
     this.win.addEventListener('resize', this.schedule);
     this.doc.addEventListener('toggle', this.schedule, true);

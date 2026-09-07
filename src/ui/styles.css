@@ -32,3 +32,6 @@ button:disabled { cursor: wait; opacity: .55; }
 #suggestions label { font-weight: 400; padding: 6px 0; overflow-wrap: anywhere; }
 [hidden] { display: none !important; }
 .badge { font-size: 12px; color: #236448; background: #edf5eb; padding: 4px 8px; border-radius: 20px; white-space: nowrap; }
+
+.criterion { min-width: 0; margin: 12px 0; border: 1px solid #aab4c4; border-radius: 8px; padding: 12px; }
+.criterion legend { padding: 0 4px; font-weight: 600; }

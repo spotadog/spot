@@ -10,6 +10,7 @@ Spot a Dog helps you quickly scan webpages by highlighting words and phrases rel
 | Keyword Profiles | Organize topics, subjects, categories, keyword types, or interests into named reusable profiles; create, edit, or delete them and manage their terms. |
 | Positive Keywords | Highlight important or desirable words and multi-word phrases in a distinct positive color, initially yellow with an underline. |
 | Negative Keywords | Highlight negative words and phrases in red so they are easy to distinguish, including when no positive terms appear nearby. |
+| Keyword Match Criteria | Select and configure all [17 match types](keyword-match-criteria.md), including word/phrase operations, lengths, structural recognition and advanced regex, for positive or negative highlights. |
 | Independent Profiles | Switch each profile on or off without changing other profiles. Only enabled profiles scan when Spot a Dog is globally on. |
 | AI Keyword Discovery | Enter seed words or phrases and ask ChatGPT through the OpenAI integration for synonyms, variations, associated concepts, and related terminology. |
 | Human Approval | Review candidates individually, select useful terms, reject or dismiss unwanted ones, choose the profile and positive or negative list, then explicitly add your selection. |
@@ -29,3 +30,7 @@ To expand a profile, select its destination, enter seeds, and click **Get sugges
 Independent red negative highlights, red overlap precedence, individual candidate dismissal, and dismissal of all candidates are implemented. See the [implementation log](implementation-log.md) for automated validation and remaining manual checks.
 
 Scanning covers supported webpage text, including dynamically added content. Browser-internal pages and other excluded content remain outside the current scope; see [matching decisions and limits](../README.md#matching-decisions-and-limits). Profiles and settings persist across browser restarts. The [functional requirements and acceptance checks](requirements.md) define the implementation contract for future changes.
+
+## Keyword matching criteria
+
+Use **Add criterion** in either profile editor, select the type and highlight color, fill the required text or numeric fields, and save. Criteria supplement existing literal lists and are included in profile backups. The [complete match-type table, examples, validation and semantics](keyword-match-criteria.md) describe every supported option.

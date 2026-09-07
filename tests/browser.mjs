@@ -337,6 +337,83 @@ try {
       return words.length === (term === 'GPU' ? 2 : 1) && words.every(word => word === term) && !CSS.highlights.has('spotadog-negative');
     }, term);
   }
+  // Exercise every selectable type through the shared editor and real page scanner.
+  const criteriaPanel = await context.newPage();
+  criteriaPanel.on('pageerror', e => errors.push(e.message));
+  await criteriaPanel.goto(`chrome-extension://${id}/popup/index.html`);
+  const samples = [
+    ['exactWord', 'dog', 'dog doghouse', ['dog']],
+    ['contains', 'dog', 'doghouse bulldog cat', ['doghouse', 'bulldog']],
+    ['startsWith', 'dog', 'doghouse bulldog', ['doghouse']],
+    ['endsWith', 'dog', 'doghouse bulldog', ['bulldog']],
+    ['exactPhrase', 'hot dog', 'hot  dog hot doghouse', ['hot  dog']],
+    ['startsWithPhrase', 'hot dog', 'hot dog walks', ['hot dog']],
+    ['endsWithPhrase', 'hot dog', 'a hot dog', ['hot dog']],
+    ['shorterThan', '5', 'dog fives longer', ['dog']],
+    ['longerThan', '5', 'dog fives longer', ['longer']],
+    ['exactLength', '5', 'dog fives longer', ['fives']],
+    ['betweenLengths', [3, 5], 'a dog fives longer', ['dog', 'fives']],
+    ['number', null, '(123) x42 -3.5', ['123', '-3.5']],
+    ['url', null, '(example.com/a) https://example.org', ['example.com/a', 'https://example.org']],
+    ['email', null, '(name@example.com) broken@host', ['name@example.com']],
+    ['hashtag', null, '(#犬) dog', ['#犬']],
+    ['mention', null, '(@spotadog) name@example.com', ['@spotadog']],
+    ['regex', '\\b(dog|cat)s?\\b', 'dogs cat DOG', ['dogs', 'cat']]
+  ];
+  for (const [type, value, text, expected] of samples) {
+    await criteriaPanel.getByRole('button', { name: 'Edit', exact: true }).click();
+    await criteriaPanel.getByLabel('Positive keywords', { exact: true }).fill('');
+    await criteriaPanel.getByLabel('Negative keywords', { exact: true }).fill('');
+    if (!await criteriaPanel.locator('.criterion').count()) await criteriaPanel.getByRole('button', { name: 'Add criterion', exact: true }).click();
+    assert.equal(await criteriaPanel.getByLabel('Match type', { exact: true }).locator('option').count(), 17);
+    await criteriaPanel.getByLabel('Match type', { exact: true }).selectOption(type);
+    if (Array.isArray(value)) {
+      await criteriaPanel.getByLabel('Minimum length').fill(String(value[0]));
+      await criteriaPanel.getByLabel('Maximum length').fill(String(value[1]));
+    } else if (value !== null) await criteriaPanel.locator('.criterion input').fill(value);
+    await importPage.evaluate(text => { document.body.replaceChildren(Object.assign(document.createElement('p'), { textContent: text })); }, text);
+    await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
+    await criteriaPanel.getByText('Profile saved.', { exact: true }).waitFor();
+    await importPage.waitForFunction(expected => JSON.stringify([...(CSS.highlights.get('spotadog-matches') ?? [])].map(r => r.toString())) === JSON.stringify(expected), expected);
+  }
+  await criteriaPanel.getByRole('button', { name: 'Edit', exact: true }).click();
+  await criteriaPanel.getByLabel('Regular expression').fill('[');
+  await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
+  await criteriaPanel.locator('#status').filter({ hasText: 'Invalid regular expression' }).waitFor();
+  assert.equal(await criteriaPanel.locator('#editor').isVisible(), true);
+  await criteriaPanel.getByLabel('Match type', { exact: true }).selectOption('betweenLengths');
+  await criteriaPanel.getByLabel('Minimum length').fill('5');
+  await criteriaPanel.getByLabel('Maximum length').fill('3');
+  await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
+  await criteriaPanel.locator('#status').filter({ hasText: 'minimum ≤ maximum' }).waitFor();
+  await criteriaPanel.getByLabel('Maximum length').fill('10');
+  await criteriaPanel.getByLabel('Highlight', { exact: true }).selectOption('negative');
+  await criteriaPanel.screenshot({ path: 'test-results/keyword-criteria.png', fullPage: true });
+  await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
+  await criteriaPanel.getByText('Profile saved.', { exact: true }).waitFor();
+  await importPage.evaluate(() => { document.querySelector('p').textContent = 'abc fives longer'; });
+  await waitFor(importPage, () => [...(CSS.highlights.get('spotadog-negative') ?? [])].map(r => r.toString()).join() === 'fives,longer');
+  const criteriaState = await criteriaPanel.evaluate(async () => (await chrome.runtime.sendMessage({ type: 'state.get' })).data);
+  const savedCriteria = [{ type: 'betweenLengths', kind: 'negative', min: 5, max: 10 }];
+  assert.deepEqual(criteriaState.profiles[0].rules.criteria, savedCriteria);
+  // Message validation also applies when a caller bypasses the form.
+  const invalidSave = await criteriaPanel.evaluate(async profile => chrome.runtime.sendMessage({ type: 'profile.save', profile: { ...profile, criteria: [{ type: 'regex', kind: 'positive', value: '[' }] } }), criteriaState.profiles[0]);
+  assert.equal(invalidSave.ok, false);
+  const roundTrip = await criteriaPanel.evaluate(async () => {
+    const exported = await chrome.runtime.sendMessage({ type: 'profiles.export', scope: 'all' });
+    const imported = await chrome.runtime.sendMessage({ type: 'profiles.import', scope: 'all', text: exported.data });
+    return { exported: JSON.parse(exported.data), imported };
+  });
+  assert.deepEqual(roundTrip.exported.profiles[0].rules.criteria, savedCriteria);
+  assert.equal(roundTrip.imported.ok, true);
+  await criteriaPanel.goto(`chrome-extension://${id}/sidepanel/index.html`);
+  await criteriaPanel.getByRole('button', { name: 'Edit', exact: true }).click();
+  assert.equal(await criteriaPanel.getByLabel('Match type', { exact: true }).inputValue(), 'betweenLengths');
+  assert.equal(await criteriaPanel.getByLabel('Minimum length').inputValue(), '5');
+  await criteriaPanel.getByRole('button', { name: 'Remove criterion', exact: true }).click();
+  await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
+  await criteriaPanel.getByText('Profile saved.', { exact: true }).waitFor();
+  await waitFor(importPage, () => CSS.highlights.size === 0);
   assert.deepEqual(errors, []);
   console.log('Browser checks passed: real MV3 loading, profile CRUD, matching/exclusions, dynamic content, toggles, settings, mocked AI review, safe rendering, popup, persistence across browser restart, profile transfers/failures, and repeated extension reloads.');
 } finally {

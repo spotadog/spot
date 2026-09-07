@@ -131,3 +131,7 @@ Independent negative matching, red precedence, negative-only scanning, revised p
 | AI failure, invalid output, deleted target, or storage failure | Clear error; no unintended profile mutation | R8–R11 |
 
 This table remains the acceptance contract. See the implementation log for what has been verified automatically and what remains manual.
+
+## R13 — Keyword match criteria
+
+[Prompt 008](prompts/008-keyword-match-criteria.md) requires all 17 [documented match types](keyword-match-criteria.md) in both profile editors and the existing evaluation/storage/transfer workflow. Criteria must distinguish word, phrase/text, length, structure and regex semantics; validate numeric bounds and regex syntax; and preserve existing literal rules. Between-length bounds are inclusive. Invalid saves/imports must fail without changing active profiles, and invalid regex must not crash evaluation. Each type must have positive, negative and boundary coverage. These additional criteria are implemented; the linked guide defines the precise supported recognition and regex performance limits.

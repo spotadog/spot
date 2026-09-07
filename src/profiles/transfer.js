@@ -1,3 +1,4 @@
+import { validateCriteria } from '../matching/criteria.js';
 import { normalizeKeywords } from './model.js';
 export const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
 function object(value, keys, required = keys) {
@@ -12,7 +13,8 @@ function validateProfile(p) {
   for (const field of ['positiveKeywords', 'negativeKeywords']) {
     if (!Array.isArray(p[field]) || JSON.stringify(normalizeKeywords(p[field])) !== JSON.stringify(p[field])) throw new Error('Invalid profile keywords: use unique, normalized text.');
   }
-  object(p.rules, ['wholeWords', 'negativeScope'], []);
+  object(p.rules, ['wholeWords', 'negativeScope', 'criteria'], []);
+  if (Object.hasOwn(p.rules, 'criteria')) validateCriteria(p.rules.criteria);
   if (Object.hasOwn(p.rules, 'wholeWords') && typeof p.rules.wholeWords !== 'boolean') throw new Error('Invalid wholeWords rule.');
   if (Object.hasOwn(p.rules, 'negativeScope') && p.rules.negativeScope !== 'text-node') throw new Error('Unsupported negativeScope rule.');
 }

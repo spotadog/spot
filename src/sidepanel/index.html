@@ -12,6 +12,7 @@
 <label for="name">Profile name</label><input id="name" required maxlength="80" placeholder="e.g. AI Infrastructure">
 <label for="positive">Positive keywords</label><textarea id="positive" placeholder="GPU&#10;inference&#10;data center"></textarea><small>One word or phrase per line. These are highlighted in yellow with an underline.</small>
 <label for="negative">Negative keywords</label><textarea id="negative" placeholder="gaming&#10;graphics settings"></textarea><small>Highlighted in red, independently of positive matches. Red takes precedence where terms overlap.</small>
+<h3>Keyword matching criteria</h3><p class="hint">Add word, phrase, length, structure or advanced regex criteria. These work alongside the literal keyword lists above. Save profile to apply changes.</p><div id="criteria"></div><button type="button" id="add-criterion">Add criterion</button>
 <label class="inline"><input id="profile-enabled" type="checkbox" checked> Profile enabled</label>
 <div class="actions"><button type="submit" class="primary">Save profile</button><button type="button" id="cancel-edit">Cancel</button></div></form></section>
 <section><h2>Discover related keywords</h2><p class="hint">Send seed keywords to OpenAI, review suggestions, then choose which to add. API usage may incur charges.</p>

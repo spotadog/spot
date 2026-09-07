@@ -32,6 +32,7 @@ After rebuilding, click **Reload** on the extension card. Accessible webpages re
 - Create, edit, delete, and toggle profiles in the popup or side panel; remove keywords by deleting their lines and saving.
 - Global pause removes highlights and disconnects scanning observers while preserving profiles.
 - Case-insensitive literal words and phrases, repeated matches, flexible whitespace, and Unicode-aware word boundaries.
+- [17 selectable keyword match criteria](docs/keyword-match-criteria.md): word/phrase operations, word lengths, numbers, URLs, email, hashtags, mentions and advanced regex in both editors.
 - Dynamic content, text edits, and common visibility attribute changes trigger a throttled rescan.
 - Full profile management and AI review in both popup and side panel; **Use sidebar** persists your preferred display location; separate settings page for optional API configuration.
 - User-reviewed OpenAI suggestions can be added to either positive or negative keyword lists.
@@ -41,7 +42,7 @@ After rebuilding, click **Reload** on the extension card. Accessible webpages re
 
 In the popup or sidebar, choose **Download all profiles** to back up the collection, or **Download profile** on a profile card for one saved profile. Unsaved edits are not exported. Choose **Import all profiles** or **Import one profile**, select a `.json` file, and confirm the import. Success and validation errors appear above the profile list.
 
-Files use UTF-8 JSON: `{ "format": "spotadog.profiles", "version": 1, "scope": "all", "profiles": [...] }`. Individual exports use `"scope": "single"` and exactly one profile. Both preserve IDs, names, positive/negative keywords, enabled states, timestamps and rules (including legacy `negativeScope`). Global pause, display/model preferences, API keys and runtime highlights are excluded.
+Files use UTF-8 JSON: `{ "format": "spotadog.profiles", "version": 1, "scope": "all", "profiles": [...] }`. Individual exports use `"scope": "single"` and exactly one profile. Both preserve IDs, names, positive/negative keywords, enabled states, timestamps and rules (including optional matching `criteria` and legacy `negativeScope`). Global pause, display/model preferences, API keys and runtime highlights are excluded.
 
 Imports merge by ID: matching IDs are replaced completely, including their words and metadata; other profiles remain. Distinct IDs may share a name, as in the existing editor. Duplicate IDs within a file are rejected. The confirmation explains replacement behavior. An empty collection exports successfully; importing it is a no-op. Single and collection files must use their matching import action. Maximum file size is 10 MiB, with at most 50 resulting profiles, 200 terms per list and 120 characters per term. Malformed JSON, non-JSON filenames, unsupported versions, missing or unknown fields, invalid rules, timestamps or keywords are rejected before any write. Unsupported data is never silently discarded or normalized during import.
 
@@ -53,7 +54,7 @@ Every worker start rereads persisted profiles and refreshes connected pages. Ext
 
 Each visible DOM text node is a matching unit. Positive terms produce yellow underlined highlights; negative terms produce red underlined highlights independently, including in profiles containing only negative terms. For a profile with positive `GPU` and negative `gaming`, `GPU gaming` highlights both terms in their respective colors.
 
-Matching uses literal text, not regular expressions. `GPU` matches `gpu` but not `GPUs`; `data center` can match whitespace or a newline between the words. Duplicate matches are deduplicated by kind and interval. Where positive and negative ranges overlap, pure matching logic subtracts the negative intervals from positive ranges: only overlapping characters turn red. Disabling a contributing profile recomputes these ranges. Both highlight layers are cleared when globally paused.
+The original keyword lists use literal text. Additional [keyword match criteria](docs/keyword-match-criteria.md) support 17 selectable types, including advanced regular expressions. `GPU` matches `gpu` but not `GPUs`; `data center` can match whitespace or a newline between the words. Duplicate matches are deduplicated by kind and interval. Where positive and negative ranges overlap, pure matching logic subtracts the negative intervals from positive ranges: only overlapping characters turn red. Disabling a contributing profile recomputes these ranges. Both highlight layers are cleared when globally paused.
 
 The scanner skips scripts, styles, forms, code/preformatted text, editable areas, hidden content, and non-text media. CSS Custom Highlight ranges paint text without inserting wrappers or rewriting the webpage DOM. “Visible” includes rendered text below the fold, not just text in the viewport.
 
@@ -107,7 +108,7 @@ docs/prompt-processing-flow.md
 AGENTS.md                  Project workflow instructions for future coding agents
 ```
 
-The profile `rules` object establishes a future extension point; version 1 uses the documented text-node matching and whole-word semantics. Existing `negativeScope` fields remain readable but have no effect; new profiles omit that obsolete field. Storage rejects unknown schema versions rather than overwriting them. Add explicit migration logic in the storage adapter when the schema changes.
+The profile `rules` object optionally contains `criteria` for the [17 match types](docs/keyword-match-criteria.md#developer-representation-and-compatibility). Absent criteria retain legacy text-node literal matching; no migration is needed. Existing `negativeScope` fields remain readable but have no effect; new profiles omit that obsolete field. Storage rejects unknown schema versions rather than overwriting them. Add explicit migration logic in the storage adapter when the schema changes.
 
 ## Validation
 

@@ -1,7 +1,10 @@
+import { criteriaEditor } from '../ui/criteria-editor.js';
 import { MAX_IMPORT_BYTES, parseImport } from '../profiles/transfer.js';
 import { request, element, report, action, subscribe, wireGlobal, wirePageStatus } from '../ui/client.js';
 const $ = selector => document.querySelector(selector);
 if (location.pathname.startsWith('/popup/')) document.body.classList.add('popup');
+const criteria = criteriaEditor($('#criteria'));
+action($('#add-criterion'), () => criteria.add());
 let state, editingId = null, suggestionProfile = null;
 function edit(profile) {
   editingId = profile?.id ?? null;
@@ -9,6 +12,7 @@ function edit(profile) {
   $('#name').value = profile?.name ?? '';
   $('#positive').value = (profile?.positiveKeywords ?? []).join('\n');
   $('#negative').value = (profile?.negativeKeywords ?? []).join('\n');
+  criteria.load(profile?.rules?.criteria);
   $('#profile-enabled').checked = profile?.enabled ?? true;
   $('#editor').hidden = false;
   $('#name').focus();
@@ -46,7 +50,7 @@ async function refresh() {
     const downloadButton = element('button', 'Download profile');
     action(downloadButton, () => download('single', profile.id));
     actions.append(editButton, downloadButton, deleteButton);
-    card.append(row, element('p', `${profile.positiveKeywords.length} positive · ${profile.negativeKeywords.length} negative`, { className: 'hint' }), actions);
+    card.append(row, element('p', `${profile.positiveKeywords.length} positive · ${profile.negativeKeywords.length} negative · ${profile.rules?.criteria?.length ?? 0} criteria`, { className: 'hint' }), actions);
     $('#profiles').append(card);
   }
   const selected = $('#ai-profile').value;
@@ -82,7 +86,7 @@ $('#profile-form').addEventListener('submit', async event => {
   const button = event.submitter;
   button.disabled = true;
   try {
-    await request('profile.save', { profile: { id: editingId, name: $('#name').value, positiveKeywords: $('#positive').value, negativeKeywords: $('#negative').value, enabled: $('#profile-enabled').checked } });
+    await request('profile.save', { profile: { id: editingId, name: $('#name').value, positiveKeywords: $('#positive').value, negativeKeywords: $('#negative').value, enabled: $('#profile-enabled').checked, criteria: criteria.read() } });
     $('#editor').hidden = true;
     report('Profile saved.');
     await refresh();
