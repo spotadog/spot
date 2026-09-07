@@ -1,6 +1,6 @@
 import { providers } from '../services/models.js';
 import { keywordEditor } from '../ui/keyword-editor.js';
-import { criteriaEditor } from '../ui/criteria-editor.js';
+import { editableKeywords } from '../profiles/keyword.js';
 import { MAX_IMPORT_BYTES, parseImport } from '../profiles/transfer.js';
 import { request, element, report, action, subscribe, wireGlobal, wirePageStatus } from '../ui/client.js';
 const $ = selector => document.querySelector(selector);
@@ -8,16 +8,12 @@ if (location.pathname.startsWith('/popup/')) document.body.classList.add('popup'
 const markDirty = () => { dirty = true; };
 const positive = keywordEditor($('#positive'), 'Positive', markDirty);
 const negative = keywordEditor($('#negative'), 'Negative', markDirty);
-const criteria = criteriaEditor($('#criteria'));
-action($('#add-criterion'), () => { criteria.add(); markDirty(); });
 let state, editingId = null, suggestionProfile = null;
 let editMode = false, dirty = false, saving = false, loadedProfile = null, refreshRevision = 0;
 function setEditMode(value) {
   editMode = value;
   $('#name').readOnly = !value;
   $('#profile-enabled').disabled = !value;
-  $('#criteria-fields').disabled = !value;
-  $('#add-criterion').hidden = !value;
   $('#save-actions').hidden = !value;
   $('#edit-profile').hidden = !editingId || value;
   positive.setEditable(value);
@@ -33,9 +29,8 @@ function view(profile, editable = false) {
   $('#name').value = profile?.name ?? '';
   $('#keyword-search').value = '';
   positive.filter(''); negative.filter('');
-  positive.load(profile?.positiveKeywords);
-  negative.load(profile?.negativeKeywords);
-  criteria.load(profile?.rules?.criteria);
+  positive.load(editableKeywords(profile, 'positive'));
+  negative.load(editableKeywords(profile, 'negative'));
   $('#profile-enabled').checked = profile?.enabled ?? true;
   $('#editor').hidden = !profile && !editable;
   $('#delete-profile').hidden = !profile;
@@ -59,10 +54,7 @@ $('#keyword-search').addEventListener('input', event => {
   positive.filter(event.target.value); negative.filter(event.target.value);
 });
 $('#profile-form').addEventListener('input', event => {
-  if (editMode && event.target.matches('#name, #profile-enabled, #criteria input, #criteria select')) markDirty();
-});
-$('#criteria').addEventListener('click', event => {
-  if (event.target.closest('button')) markDirty();
+  if (editMode && event.target.matches('#name, #profile-enabled')) markDirty();
 });
 action($('#edit-profile'), () => { if (!saving) { setEditMode(true); $('#name').focus(); } });
 action($('#delete-profile'), async () => {
@@ -133,7 +125,7 @@ $('#profile-form').addEventListener('submit', async event => {
   button.disabled = true;
   $('#profile-select').disabled = true;
   try {
-    const profile = { id: editingId, name: $('#name').value, positiveKeywords: positive.read(), negativeKeywords: negative.read(), enabled: $('#profile-enabled').checked, criteria: criteria.read() };
+    const profile = { id: editingId, name: $('#name').value, positiveKeywords: positive.read(), negativeKeywords: negative.read(), enabled: $('#profile-enabled').checked, criteria: [] };
     $('#profile-form').inert = true;
     report('Saving profile…');
     const saved = await request('profile.save', { profile });

@@ -37,7 +37,7 @@ Scanning covers supported webpage text, including dynamically added content. Bro
 
 ## Keyword matching criteria
 
-Use **Add criterion** in either profile editor, select the type and highlight color, fill the required text or numeric fields, and save. Criteria supplement existing literal lists and are included in profile backups. The [complete match-type table, examples, validation and semantics](keyword-match-criteria.md) describe every supported option.
+Use **Add Keyword** or **Edit** on a keyword, enter its text and optionally select **Keyword matching criteria**. Each keyword owns its criterion; its group determines highlight color. Save keyword, then Save profile. Default retains literal matching. Criteria are included in profile backups. The [complete match-type table, examples, validation and semantics](keyword-match-criteria.md) describe every supported option.
 
 ## AI model choices
 

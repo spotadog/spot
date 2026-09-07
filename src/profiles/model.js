@@ -1,3 +1,4 @@
+import { keywordText, keywordCriterion, keywordKey } from './keyword.js';
 import { validateCriteria } from '../matching/criteria.js';
 export const DEFAULT_PREFERENCES = { model: 'gpt-4o-mini', sidebar: false };
 export function normalizeKeywords(value) {
@@ -5,29 +6,34 @@ export function normalizeKeywords(value) {
   if (!Array.isArray(items) || items.length > 200) throw new Error('Use at most 200 keywords per list.');
   const seen = new Set();
   return items.flatMap(item => {
-    if (typeof item !== 'string') throw new Error('Keywords must be text.');
-    const clean = item.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
+    const text = keywordText(item);
+    if (typeof text !== 'string' || (typeof item === 'object' && (Array.isArray(item) || Object.keys(item).some(k => !['text', 'matchingCriteria'].includes(k))))) throw new Error('Keywords must be text or keyword records.');
+    const clean = item?.matchingCriteria?.type === 'regex' ? text : text.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
     if (clean.length > 120) throw new Error('Keep each keyword or phrase under 121 characters.');
-    const key = clean.toLowerCase();
+    const record = typeof item === 'string' ? clean : { ...item, text: clean };
+    keywordCriterion(record);
+    const key = keywordKey(record);
     if (!clean || seen.has(key)) return [];
     seen.add(key);
-    return [clean];
+    return [record];
   });
 }
 // Validate one explicit edit without the bulk normalizer's silent empty/duplicate removal.
 export function validateKeyword(value, others = []) {
   const [clean] = normalizeKeywords([value]);
   if (!clean) throw new Error('Enter a keyword or phrase.');
-  if (others.some(term => term.toLowerCase() === clean.toLowerCase())) throw new Error('This keyword already exists in this list. Choose a different keyword.');
+  if (others.some(term => keywordText(term).toLowerCase() === keywordText(clean).toLowerCase())) throw new Error('This keyword already exists in this list. Choose a different keyword.');
   if (others.length >= 200) throw new Error('Use at most 200 keywords per list.');
   return clean;
 }
 export function mergeKeywords(existing, candidates) {
-  const merged = new Map(existing.map(term => [term.toLowerCase(), term]));
+  const merged = [...existing];
+  const seen = new Set(existing.map(term => keywordText(term).toLowerCase()));
   for (const term of normalizeKeywords(candidates)) {
-    if (!merged.has(term.toLowerCase())) merged.set(term.toLowerCase(), term);
+    const key = keywordText(term).toLowerCase();
+    if (!seen.has(key)) { merged.push(term); seen.add(key); }
   }
-  return normalizeKeywords([...merged.values()]);
+  return normalizeKeywords(merged);
 }
 export function makeProfile(input, existing) {
   const name = typeof input.name === 'string' ? input.name.trim() : '';

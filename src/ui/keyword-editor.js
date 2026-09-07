@@ -1,3 +1,6 @@
+import { keywordText } from '../profiles/keyword.js';
+import { MATCH_TYPES } from '../matching/criteria.js';
+import { criteriaEditor } from './criteria-editor.js';
 import { validateKeyword } from '../profiles/model.js';
 import { element, report } from './client.js';
 
@@ -8,7 +11,7 @@ export function keywordEditor(container, title, onChange = () => {}) {
   const add = element('button', 'Add Keyword', { type: 'button' });
   let rows = [], editable = false, query = '';
   function update() {
-    for (const item of rows) item.row.hidden = !item.editing && !item.value?.toLowerCase().includes(query);
+    for (const item of rows) item.row.hidden = !item.editing && !keywordText(item.value)?.toLowerCase().includes(query);
     empty.hidden = rows.some(item => !item.row.hidden);
     empty.textContent = rows.length ? 'No keywords match your search.' : editable ? 'No keywords yet. Choose Add Keyword to start.' : 'No keywords yet.';
     add.hidden = !editable;
@@ -20,6 +23,9 @@ export function keywordEditor(container, title, onChange = () => {}) {
     const text = element('span');
     label.append(selected, text);
     const input = element('input', undefined, { type: 'text', ariaLabel: `${title} keyword`, placeholder: 'Enter one word or phrase' });
+    const criteriaContainer = element('div');
+    const criteria = criteriaEditor(criteriaContainer, onChange);
+    criteria.load(value?.matchingCriteria);
     const error = element('p', '', { className: 'keyword-error', role: 'alert' });
     const edit = element('button', 'Edit', { type: 'button' });
     const save = element('button', 'Save keyword', { type: 'button' });
@@ -27,12 +33,15 @@ export function keywordEditor(container, title, onChange = () => {}) {
     const remove = element('button', 'Remove', { type: 'button', className: 'danger' });
     const actions = element('div', undefined, { className: 'actions' });
     actions.append(edit, save, cancel, remove);
-    row.append(label, input, error, actions);
+    row.append(label, input, criteriaContainer, error, actions);
     const record = { value, row, editing: value === null, render };
     rows.push(record);
     function render() {
-      text.textContent = record.value ?? 'New keyword';
-      selected.ariaLabel = `Select ${record.value ?? 'new keyword'}`;
+      text.textContent = keywordText(record.value) ?? 'New keyword';
+      const criterion = record.value?.matchingCriteria;
+      if (criterion) text.textContent += ` — ${MATCH_TYPES.find(d => d.type === criterion.type)?.label ?? criterion.type}${criterion.value !== undefined ? ` (${criterion.value})` : criterion.min !== undefined ? ` (${criterion.min}–${criterion.max})` : ''}`;
+      criteriaContainer.hidden = !record.editing;
+      selected.ariaLabel = `Select ${keywordText(record.value) ?? 'new keyword'}`;
       row.classList.toggle('selected', selected.checked);
       input.hidden = save.hidden = cancel.hidden = !record.editing;
       edit.hidden = !editable || record.editing;
@@ -50,10 +59,10 @@ export function keywordEditor(container, title, onChange = () => {}) {
     }
     selected.addEventListener('change', () => row.classList.toggle('selected', selected.checked));
     input.addEventListener('input', onChange);
-    edit.addEventListener('click', () => { record.editing = true; input.value = record.value; render(); input.focus(); row.scrollIntoView({ block: 'nearest' }); });
+    edit.addEventListener('click', () => { record.editing = true; input.value = keywordText(record.value); criteria.load(record.value?.matchingCriteria); render(); input.focus(); row.scrollIntoView({ block: 'nearest' }); });
     save.addEventListener('click', () => {
       try {
-        record.value = validateKeyword(input.value, rows.filter(item => item !== record && item.value !== null).map(item => item.value));
+        record.value = validateKeyword(criteria.read() ? { text: input.value, matchingCriteria: criteria.read() } : input.value, rows.filter(item => item !== record && item.value !== null).map(item => item.value));
         record.editing = false;
         render();
         onChange();
@@ -70,7 +79,7 @@ export function keywordEditor(container, title, onChange = () => {}) {
       if (record.value === null) discard();
       else { record.editing = false; render(); update(); edit.focus(); }
     });
-    remove.addEventListener('click', () => { if (confirm(`Remove “${record.value}”? Save profile to apply this change.`)) discard(); });
+    remove.addEventListener('click', () => { if (confirm(`Remove “${keywordText(record.value)}”? Save profile to apply this change.`)) discard(); });
     list.append(row);
     render();
     update();

@@ -1,6 +1,8 @@
 # Keyword Match Types / Keyword Match Criteria
 
-In either the popup or sidebar, create or edit a profile, choose **Add criterion**, select a **Match type** and positive (yellow) or negative (red) **Highlight**, fill its configuration, then **Save profile**. Add several criteria to match any of them. **Remove criterion** takes effect when saved. Criteria work even with empty keyword lists. The original one-term-per-line lists and approved AI suggestions still use their original case-insensitive literal word/phrase matching.
+In either popup or sidebar, edit a profile and choose **Add Keyword** in the positive or negative group, or **Edit** on an existing keyword. Enter the keyword text, optionally choose **Keyword matching criteria**, then **Save keyword** and **Save profile**. Each keyword has its own criterion, displayed beside its text. Choose **Default (literal word or phrase)** to remove it and restore the original case-insensitive literal word/phrase matching. Default is not Contains: `dog` does not match `doghouse` unless you select an appropriate criterion.
+
+Word, phrase and regex criteria use the keyword text itself as the search value, with no prefixes or separate search field. Length criteria retain separate numeric controls; structural criteria automatically recognize their structure. For length and structural criteria the required keyword text names that search, preserving their existing recognition behavior. Group membership determines yellow or red highlighting.
 
 | Match type | Behavior | Example | Required configuration |
 | --- | --- | --- | --- |
@@ -22,7 +24,7 @@ In either the popup or sidebar, create or edit a profile, choose **Add criterion
 | @ Mention | `@` followed by letters, numbers or underscores | `@spotadog`, `@犬` | None |
 | Regex (Advanced) | JavaScript regular expression over the original text node | `\bdogs?\b` matches `dog` and `dogs` | Pattern source, without `/` delimiters |
 
-For example, enter `\b(dog|cat)s?\b` in **Regular expression** to match `dog`, `dogs`, `cat` or `cats`.
+For example, enter `\b(dog|cat)s?\b` as the keyword text and choose **Regex (Advanced)** to match `dog`, `dogs`, `cat` or `cats`.
 
 ## Text and highlighting semantics
 
@@ -38,7 +40,7 @@ For example, enter `\b(dog|cat)s?\b` in **Regular expression** to match `dog`, `
 
 ## Validation and regex behavior
 
-Profiles allow at most 200 additional criteria, alongside the existing 200 entries per literal list. Word/phrase/pattern input must be nonblank and at most 120 UTF-16 code units, matching the existing keyword limit. Length values must be integers from 0 through 10000. Minimum must not exceed maximum; equal boundaries are valid. Structural criteria have no keyword/numeric fields. Unknown types, missing/extra fields and invalid highlight kinds are rejected.
+Each keyword group allows 200 entries. Word/phrase/pattern input must be nonblank and at most 120 UTF-16 code units, matching the existing keyword limit. Length values must be integers from 0 through 10000. Minimum must not exceed maximum; equal boundaries are valid. Structural criteria need no numeric configuration. Unknown types, missing/extra fields and invalid highlight kinds are rejected.
 
 The shared validator runs in the editor, service-worker profile save and JSON import/export. Errors use the existing status message; failed saves/imports do not alter persisted or active profiles. Evaluation ignores an invalid criterion defensively instead of throwing.
 
@@ -50,24 +52,21 @@ Regex runs in the existing synchronous page matcher. The 120-character source li
 
 `src/matching/criteria.js` is the shared type catalog and strict criterion validator. `src/matching/matcher.js` evaluates criteria through `findMatches`, alongside unchanged legacy literal matching, returning UTF-16 `{start, end, kind}` ranges for the existing scanner/highlighter. Storage continues exclusively through the adapter and serialized worker mutations; `scanningState` already includes `rules`.
 
-Persist criteria in optional `profile.rules.criteria`:
+Persist optional criteria on individual keyword records in `positiveKeywords` or `negativeKeywords`:
 
 ```json
-{
-  "wholeWords": true,
-  "criteria": [
-    { "type": "contains", "kind": "positive", "value": "dog" },
-    { "type": "betweenLengths", "kind": "negative", "min": 5, "max": 10 },
-    { "type": "email", "kind": "positive" },
-    { "type": "regex", "kind": "positive", "value": "\\b(dog|cat)s?\\b" }
-  ]
-}
+[
+  "invoice",
+  { "text": "urgent", "matchingCriteria": { "type": "startsWith" } },
+  { "text": "^INV-[0-9]+$", "matchingCriteria": { "type": "regex" } },
+  { "text": "Medium words", "matchingCriteria": { "type": "betweenLengths", "min": 5, "max": 10 } }
+]
 ```
 
-Type IDs in table order: `exactWord`, `contains`, `startsWith`, `endsWith`, `exactPhrase`, `startsWithPhrase`, `endsWithPhrase`, `shorterThan`, `longerThan`, `exactLength`, `betweenLengths`, `number`, `url`, `email`, `hashtag`, `mention`, `regex`. Word/phrase/regex types require string `value`; single-length types require numeric `value`; range requires numeric `min` and `max`; structural types accept neither. Every criterion requires `kind: "positive" | "negative"`.
+`src/profiles/keyword.js` adapts records to the existing strict criterion validator/evaluator. Word/phrase/regex criteria contain only `type`; the search value comes from `text`. Single-length criteria also contain numeric `value`; ranges contain `min` and `max`; structure criteria contain only `type`. The keyword group supplies `kind`. Missing or null `matchingCriteria` uses default matching. New default UI entries remain strings for compatibility.
 
-The trusted `profile.save` message accepts `profile.criteria` as the editable array; `makeProfile` validates it and stores it in `rules.criteria`. Omission preserves existing criteria; `[]` explicitly removes them. Toggle and AI keyword approval preserve criteria. Other existing rule metadata remains untouched. State responses expose the persisted `rules.criteria` form.
+Storage and transfer versions remain 1 with additive keyword-record support. Existing strings and legacy independent `rules.criteria` searches remain readable and evaluate as before. Opening a legacy profile materializes those independent searches as keyword rows; saving writes those rows and clears the old criteria list. Other rules and metadata are preserved. If the combined legacy searches exceed the existing 200-row group limit, remove entries before saving; original storage remains intact. The old `profile.criteria` message remains supported for compatibility, but no profile-wide selector is exposed or applied to keywords.
 
-Storage schema and JSON transfer version remain 1 because this is an optional rules extension. Absent criteria mean an empty set, with no migration or reinterpretation of existing literal lists, `wholeWords` or inert `negativeScope`. Both transfer scopes round-trip the new data exactly and reject invalid criteria atomically. Older application versions reject backups containing the new field rather than silently losing it; use the updated extension to import them.
+Both backup scopes preserve strings and records exactly and reject invalid configuration before writing. Older extension versions cannot import record-based backups; use the updated extension. AI approvals preserve existing keyword criteria and append approved suggestions with default matching. No additional storage adapter or AI service is introduced.
 
-`npm run check` covers each type in pure tests and through real extension editor/scanner integration, invalid configuration, Unicode offsets/lengths, legacy compatibility, persistence, transfer, removal and both highlight kinds.
+`npm run check` covers all 17 types through pure matching and real-extension editor/scanner integration, mixed criteria, default/legacy behavior, invalid configuration, persistence, transfer and editing.

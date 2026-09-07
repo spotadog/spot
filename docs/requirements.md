@@ -54,7 +54,7 @@ Additional configuration must be possible through the existing profile rules ext
 
 Every positive word or phrase from an enabled profile must be highlighted when found on a supported webpage while global scanning is on. Positive highlights must be visually distinct from negative highlights; retain the existing yellow background and underline as the initial positive style.
 
-Retain literal, case-insensitive matching, Unicode-aware whole-word boundaries, repeated occurrences, and flexible whitespace between phrase words. Terms must not be interpreted as regular expressions. Matching remains within an individual DOM text node; cross-node phrases are outside the current scope.
+Retain literal, case-insensitive matching, Unicode-aware whole-word boundaries, repeated occurrences, and flexible whitespace between phrase words. Terms must not be interpreted as regular expressions unless that keyword explicitly selects Regex. Matching remains within an individual DOM text node; cross-node phrases are outside the current scope.
 
 ## R6 — Negative matching and overlap
 
@@ -143,3 +143,8 @@ This table remains the acceptance contract. See the implementation log for what 
 ## R15 — Provider and model configuration
 
 [Prompt 010](prompts/010-multi-provider-model-selection.md) adds OpenAI and Anthropic provider selection, curated model dropdowns, retained custom IDs, separate masked key configuration and per-provider last-selected models. Legacy settings normalize to OpenAI without losing the stored model/key. Both adapters must implement the existing structured keyword suggestion and approval contract, with actionable errors and no automatic model fallback. See the [setup and catalog maintenance guide](../README.md#ai-providers-and-model-selection).
+
+
+## R17 — Per-keyword matching criteria
+
+[Prompt 013](prompts/013-per-keyword-matching-criteria.md) associates an optional criterion with each keyword. Add/Edit Keyword exposes the existing 17 types, preserves the selected criterion and uses the keyword text as the word/phrase/regex search value. Numeric and structural recognition retain their documented behavior. Unset criteria preserve default literal matching. Mixed criteria in a profile, legacy strings and independent legacy rules, transfer, AI approval and individual editing must preserve unrelated keywords. Invalid criteria and regex fail safely. This supersedes the separate profile criterion editor described in R13.
