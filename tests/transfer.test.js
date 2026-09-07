@@ -43,7 +43,7 @@ test('serialized import persistence is atomic and preserves settings on failure'
   fail = false;
   await apply(exportProfiles([second], 'all'));
   assert.deepEqual((await createStore({ async get() { return { 'spotadog.state': saved }; } }).read()).profiles, [first, second]);
-  assert.deepEqual(saved.preferences, before.preferences);
+  assert.deepEqual(saved.preferences, { ...before.preferences, provider: 'openai', providerModels: { openai: before.preferences.model } });
 });
 test('maximum collection with multibyte terms remains within the upload limit', () => {
   const terms = Array.from({ length: 200 }, (_, i) => String(i).padStart(3, '0') + '犬'.repeat(117));

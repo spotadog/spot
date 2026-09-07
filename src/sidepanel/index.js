@@ -1,3 +1,4 @@
+import { providers } from '../services/models.js';
 import { keywordEditor } from '../ui/keyword-editor.js';
 import { criteriaEditor } from '../ui/criteria-editor.js';
 import { MAX_IMPORT_BYTES, parseImport } from '../profiles/transfer.js';
@@ -25,6 +26,7 @@ async function refresh() {
   $('#global-enabled').checked = state.enabled;
   $('#sidebar-mode').checked = state.preferences.sidebar;
   $('#show-sidebar').hidden = !state.preferences.sidebar;
+  $('#ai-model').textContent = `${providers[state.preferences.provider]?.name ?? 'Unsupported provider'} — ${state.preferences.model}`;
   if (state.hasApiKey) $('#configure-key').hidden = true;
   $('#global-note').textContent = state.enabled ? 'Matching enabled profiles on supported web pages.' : 'Paused. Highlights are removed; profiles remain saved.';
   $('#profiles').replaceChildren();
@@ -104,7 +106,7 @@ action($('#suggest'), async () => {
   const latest = await request('state.get');
   if (!latest.hasApiKey) {
     $('#configure-key').hidden = false;
-    throw new Error('AI keyword suggestions require an OpenAI API key. Choose Configure API key. You can still manage profiles and keywords without one.');
+    throw new Error(`AI keyword suggestions require an ${providers[latest.preferences.provider]?.name ?? 'available provider'} API key. Choose Configure API key. You can still manage profiles and keywords without one.`);
   }
   report('Requesting suggestions…');
   const suggestions = await request('ai.suggest', { seeds: $('#seeds').value });

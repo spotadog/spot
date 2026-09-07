@@ -1,6 +1,6 @@
 import { createStore, scanningState } from '../storage/store.js';
 import { makeProfile, mergeKeywords } from '../profiles/model.js';
-import { suggestKeywords } from '../services/openai.js';
+import { suggestKeywords } from '../services/ai.js';
 import { exportProfiles, parseImport, mergeProfiles } from '../profiles/transfer.js';
 const store = createStore();
 async function applyDisplay(sidebar) {
@@ -71,7 +71,11 @@ async function handle(message, sender) {
     try { failed = await broadcast(); } catch { failed = true; }
     return { count: imported.length, warning: failed ? 'Profiles saved, but a page could not refresh. Reload affected webpages.' : '' };
   }
-  if (message.type === 'state.get') return { ...await store.read(), hasApiKey: Boolean(await store.getKey()) };
+  if (message.type === 'state.get') {
+    const state = await store.read();
+    const configuredProviders = { openai: Boolean(await store.getKey('openai')), anthropic: Boolean(await store.getKey('anthropic')) };
+    return { ...state, configuredProviders, hasApiKey: Boolean(configuredProviders[state.preferences.provider]) };
+  }
   if (message.type === 'display.set') {
     if (typeof message.sidebar !== 'boolean') throw new Error('Invalid sidebar preference.');
     await setDisplay(message.sidebar);
@@ -79,14 +83,14 @@ async function handle(message, sender) {
     return true;
   }
   if (message.type === 'settings.save') {
-    const model = message.model?.trim();
-    if (!model || !/^[a-zA-Z0-9._:-]{1,100}$/.test(model)) throw new Error('Enter a valid model ID.');
-    if (message.apiKey !== undefined) await store.setKey(message.apiKey.trim());
-    await store.update(s => ({ ...s, preferences: { ...s.preferences, model } }));
+    await store.saveSettings({ provider: message.provider ?? 'openai', model: message.model?.trim(), apiKey: message.apiKey });
     await broadcast();
     return true;
   }
-  if (message.type === 'ai.suggest') return suggestKeywords({ apiKey: await store.getKey(), seeds: message.seeds, model: (await store.read()).preferences.model });
+  if (message.type === 'ai.suggest') {
+    const { provider, model } = (await store.read()).preferences;
+    return suggestKeywords({ provider, model, apiKey: await store.getKey(provider), seeds: message.seeds });
+  }
   await store.update(s => {
     switch (message.type) {
       case 'global.set':

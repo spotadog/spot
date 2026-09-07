@@ -12,7 +12,7 @@ Spot a Dog helps you quickly scan webpages by highlighting words and phrases rel
 | Negative Keywords | Highlight negative words and phrases in red so they are easy to distinguish, including when no positive terms appear nearby. |
 | Keyword Match Criteria | Select and configure all [17 match types](keyword-match-criteria.md), including word/phrase operations, lengths, structural recognition and advanced regex, for positive or negative highlights. |
 | Independent Profiles | Switch each profile on or off without changing other profiles. Only enabled profiles scan when Spot a Dog is globally on. |
-| AI Keyword Discovery | Enter seed words or phrases and ask ChatGPT through the OpenAI integration for synonyms, variations, associated concepts, and related terminology. |
+| AI Keyword Discovery | Enter seed words or phrases and ask an OpenAI or Anthropic model for synonyms, variations, associated concepts, and related terminology. |
 | Human Approval | Review candidates individually, select useful terms, reject or dismiss unwanted ones, choose the profile and positive or negative list, then explicitly add your selection. |
 
 ## Everyday use
@@ -23,7 +23,7 @@ Use **Add Keyword** to enter one term, **Save keyword** to finish that row, and 
 
 For example, a profile named **AI Infrastructure** could contain positive terms `GPU`, `inference`, and `data center`, and negative terms `gaming` and `graphics settings`. The required behavior highlights positives in yellow and negatives in red. If the same characters match both kinds, red takes precedence. You can enable this profile alongside other interests or disable it independently.
 
-Open **Settings** to save your own API key and model configuration. A blank key field retains the saved key; **Remove API key** deletes it. The key is stored locally, unencrypted, for use in a trusted browser profile. Only explicitly entered discovery seeds are sent to OpenAI; webpage text is not sent. No API key is needed to create profiles or highlight pages. See [credential requirements](requirements.md#r8--ai-configuration-and-credentials) for handling and privacy rules.
+Open **Settings** to save your own API key and model configuration. A blank key field retains the saved key; **Remove API key** deletes it. The key is stored locally, unencrypted, for use in a trusted browser profile. Only explicitly entered discovery seeds are sent to OpenAI or Anthropic; webpage text is not sent. No API key is needed to create profiles or highlight pages. See [credential requirements](requirements.md#r8--ai-configuration-and-credentials) for handling and privacy rules.
 
 To expand a profile, select its destination, enter seeds, and click **Get suggestions**. Review the results, select terms you want, choose the positive or negative list, and click **Add selected**. Generation alone never changes your profile. Adding terms while the profile or global switch is off stores them for later use without turning scanning on.
 
@@ -36,3 +36,7 @@ Scanning covers supported webpage text, including dynamically added content. Bro
 ## Keyword matching criteria
 
 Use **Add criterion** in either profile editor, select the type and highlight color, fill the required text or numeric fields, and save. Criteria supplement existing literal lists and are included in profile backups. The [complete match-type table, examples, validation and semantics](keyword-match-criteria.md) describe every supported option.
+
+## AI model choices
+
+Settings offers separate OpenAI and Anthropic credentials and predefined model dropdowns. Custom IDs remain available, and each provider remembers its last model. Both providers support the same reviewed keyword suggestions. See [provider setup](../README.md#ai-providers-and-model-selection).

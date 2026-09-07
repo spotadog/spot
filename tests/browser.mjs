@@ -76,10 +76,60 @@ try {
   options.on('pageerror', e => errors.push(e.message));
   await options.goto(`chrome-extension://${id}/options/index.html`);
   await options.getByLabel('OpenAI API key', { exact: true }).fill('test-placeholder');
-  await options.getByLabel('Model ID').fill('test-model');
+  await options.getByLabel('Model', { exact: true }).selectOption('custom');
+  await options.getByLabel('Custom model ID').fill('test-model');
   await options.getByRole('button', { name: 'Save settings' }).click();
   await options.getByText('Settings saved.', { exact: true }).waitFor();
   assert.equal(await options.getByLabel('OpenAI API key', { exact: true }).inputValue(), '');
+  // Curated models need no manual registration; switching preserves each provider's model/key.
+  assert.equal(await options.locator('#model option').count(), 4);
+  await options.getByLabel('Model', { exact: true }).selectOption('gpt-4.1-mini');
+  await options.getByRole('button', { name: 'Save settings' }).click();
+  await options.waitForFunction(() => document.querySelector('#active-model').textContent.includes('gpt-4.1-mini'));
+  await options.reload();
+  await options.waitForFunction(() => document.querySelector('#model').value === 'gpt-4.1-mini');
+  await options.getByLabel('Provider', { exact: true }).selectOption('anthropic');
+  assert.equal(await options.locator('#model option').count(), 4);
+  assert.ok((await options.locator('#model').textContent()).includes('Claude Sonnet 5'));
+  await options.getByLabel('Anthropic API key', { exact: true }).fill('anthropic-test-placeholder');
+  await options.getByLabel('Model', { exact: true }).selectOption('claude-sonnet-5');
+  await options.getByRole('button', { name: 'Save settings' }).click();
+  await options.waitForFunction(() => document.querySelector('#active-model').textContent.includes('claude-sonnet-5'));
+  await panel.locator('#ai-model').filter({ hasText: 'Anthropic — claude-sonnet-5' }).waitFor();
+  assert.equal(await options.getByLabel('Anthropic API key', { exact: true }).inputValue(), '');
+  await options.reload();
+  await options.waitForFunction(() => document.querySelector('#model').value === 'claude-sonnet-5');
+  await worker.evaluate(() => {
+    globalThis.fetch = async (url, init) => {
+      const body = JSON.parse(init.body);
+      if (url !== 'https://api.anthropic.com/v1/messages' || body.model !== 'claude-sonnet-5' || init.headers['x-api-key'] !== 'anthropic-test-placeholder') throw Error('Wrong provider request');
+      return new Response(JSON.stringify({ type: 'message', stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({ suggestions: ['CUDA', 'gaming', '<img src=x>'] }) }] }));
+    };
+  });
+  for (const [target, keyword] of [['positiveKeywords', 'CUDA'], ['negativeKeywords', 'gaming']]) {
+    await panel.getByLabel('Seed keywords').fill('AI');
+    await panel.getByRole('button', { name: 'Get suggestions' }).click();
+    await panel.getByText('Choose the suggestions you want to keep.', { exact: true }).waitFor();
+    assert.equal(await panel.locator('#suggestions img').count(), 0);
+    await panel.getByLabel('Keyword list', { exact: true }).selectOption(target);
+    await panel.getByLabel(keyword, { exact: true }).check();
+    await panel.getByRole('button', { name: 'Add selected' }).click();
+    await panel.getByText('Selected keywords added.', { exact: true }).waitFor();
+  }
+  await mkdir('test-results', { recursive: true });
+  await options.screenshot({ path: 'test-results/anthropic-settings.png', fullPage: true });
+  await options.getByRole('button', { name: 'Remove API key' }).click();
+  await options.getByText('No API key saved. Add one to request suggestions.', { exact: true }).waitFor();
+  await panel.getByRole('button', { name: 'Get suggestions' }).click();
+  await panel.locator('#status').filter({ hasText: 'require an Anthropic API key' }).waitFor();
+  await options.getByLabel('Provider', { exact: true }).selectOption('openai');
+  assert.equal(await options.locator('#model').inputValue(), 'gpt-4.1-mini');
+  await options.getByText('An API key is saved.', { exact: true }).waitFor();
+  await options.getByLabel('Model', { exact: true }).selectOption('custom');
+  await options.getByLabel('Custom model ID').fill('test-model');
+  await options.getByRole('button', { name: 'Save settings' }).click();
+  await options.waitForFunction(() => document.querySelector('#active-model').textContent.includes('test-model'));
+  await panel.locator('#ai-model').filter({ hasText: 'OpenAI — test-model' }).waitFor();
   // Mock only the external network boundary inside the real extension worker.
   await worker.evaluate(() => {
     globalThis.fetch = async () => new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ suggestions: ['LLM', '<img src=x onerror=alert(1)>'] }) }] }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
@@ -87,6 +137,7 @@ try {
   await panel.getByLabel('Seed keywords').fill('artificial intelligence');
   await panel.getByRole('button', { name: 'Get suggestions' }).click();
   await panel.getByText('Choose the suggestions you want to keep.', { exact: true }).waitFor();
+  await panel.getByLabel('Keyword list', { exact: true }).selectOption('positiveKeywords');
   const getState = () => panel.evaluate(async () => (await chrome.runtime.sendMessage({ type: 'state.get' })).data);
   assert.deepEqual((await getState()).profiles[0].positiveKeywords, ['GPU', 'CUDA']);
   assert.equal(await panel.locator('#suggestions img').count(), 0);

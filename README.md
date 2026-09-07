@@ -35,7 +35,7 @@ After rebuilding, click **Reload** on the extension card. Accessible webpages re
 - [17 selectable keyword match criteria](docs/keyword-match-criteria.md): word/phrase operations, word lengths, numbers, URLs, email, hashtags, mentions and advanced regex in both editors.
 - Dynamic content, text edits, and common visibility attribute changes trigger a throttled rescan.
 - Full profile management and AI review in both popup and side panel; **Use sidebar** persists your preferred display location; separate settings page for optional API configuration.
-- User-reviewed OpenAI suggestions can be added to either positive or negative keyword lists.
+- User-reviewed OpenAI or Anthropic Claude suggestions can be added to either positive or negative keyword lists.
 - Local persistence across browser and extension restarts.
 
 ## Managing individual keywords
@@ -76,17 +76,32 @@ Initial limitations:
 
 ## Storage and privacy
 
-`src/storage/store.js` is the sole Chrome storage adapter. `chrome.storage.local` stores versioned profile/settings data under `spotadog.state` and the optional API key separately under `spotadog.apiKey`. No Chrome sync storage is used. Uninstalling the extension removes its local data.
+`src/storage/store.js` is the sole Chrome storage adapter. `chrome.storage.local` stores versioned profile/settings data under `spotadog.state` and optional provider keys separately under `spotadog.apiKey` (OpenAI) and `spotadog.anthropicApiKey` (Anthropic). No Chrome sync storage is used. Uninstalling the extension removes its local data.
 
 The worker restricts local storage to `TRUSTED_CONTEXTS`. Content scripts receive only enabled state and scanning profile fields through validated messages; they cannot read settings or the API key or invoke profile/settings mutations. Extension UI reads only whether a key exists, not its value. The key is persisted locally **without encryption**; this personal bring-your-own-key implementation is intended for a trusted browser profile, not for embedding a developer’s shared secret in a distributed extension.
 
-Permissions are `storage`, `sidePanel`, `scripting`, HTTP/HTTPS host and content-script access for automatic scanning, and the OpenAI API host for explicit suggestion requests. No webpage text is sent to OpenAI. The extension does not use analytics.
+Permissions are `storage`, `sidePanel`, `scripting`, HTTP/HTTPS host and content-script access for automatic scanning, and the OpenAI and Anthropic API hosts for explicit suggestion requests. No webpage text is sent to either provider. The extension does not use analytics.
 
-## OpenAI integration
+## AI providers and model selection
 
-Open **Settings** from the popup or side panel. Save your own API key and a Responses-compatible model ID (default `gpt-4o-mini`). Leave the key field blank to retain it; use **Remove API key** to delete it. Model access and API billing depend on your OpenAI account; a ChatGPT subscription does not supply API credit.
+Open **Settings** from the popup or side panel. Choose **OpenAI** or **Anthropic**, enter your own API key, select a predefined model from **Model**, and **Save settings**. A key is optional for manual profiles and highlighting. Providers remain selectable for setup and are labeled as configured once a key is saved. Blank retains the selected provider's saved key; **Remove API key** clears only that provider's key. Switching providers clears an unsaved key field to prevent saving it to the wrong provider. Save a new key before switching.
 
-In either interface, select a profile, enter 1–20 seed keywords, and click **Get suggestions**. Only those seeds are sent to `https://api.openai.com/v1/responses`, on your explicit request. The dedicated `src/services/openai.js` service requests a strict JSON schema with `store: false` and a 25-second timeout. The authoritative `src/services/suggestion-contract.js` schema is included in both the instructions and strict response format on every request. It defines exactly `{ "suggestions": string[] }`: a required, non-null array with at most 30 candidates and no extra fields. The prompt targets 20 candidates; the 30-item validation ceiling preserves existing compatibility. The parser validates the wire structure against that schema before applying existing keyword normalization and the 120-character domain limit. It handles authentication/quota/network errors, refusals, malformed envelopes/JSON, schema violations, and incomplete responses without extracting JSON from prose or Markdown. Suggestions are validated, bounded, deduplicated, rendered as text, and never added automatically. Select the suggestions and target list, then click **Add selected**. Use each candidate’s **Dismiss** button or **Dismiss all** to discard review candidates without changing saved keywords. Closing the panel also discards unapproved review candidates.
+The settings page shows the saved provider/model, and both keyword review interfaces show the active selection. Each provider remembers its last model. Existing OpenAI keys and model IDs migrate without changing them. **Custom model…** retains manual ID entry (including legacy custom IDs); custom models must support the selected API's structured JSON format. Unknown models are retained, not silently replaced. Invalid IDs/providers and unavailable or inaccessible API models produce actionable errors; choose a predefined model and save to recover. Predefined availability still depends on your API account. API usage and billing are separate from ChatGPT or Claude subscriptions.
+
+| Provider | Predefined models |
+| --- | --- |
+| OpenAI | GPT-4o Mini (existing default), GPT-4.1 Mini, GPT-4.1 |
+| Anthropic | Claude Haiku 4.5 (default), Claude Sonnet 5, Claude Opus 5 |
+
+Get an Anthropic API key from the [Claude Console](https://platform.claude.com/). Keys use the existing unencrypted, trusted-context local storage pattern and are never returned in UI state, exported with profiles, or included in errors. This browser extension has no environment-variable configuration; enter keys in Settings. No shared developer key is bundled.
+
+`src/services/models.js` contains the curated IDs, display names, provider defaults, and supported application feature metadata. To maintain it, verify IDs and structured-output support against official documentation, update this table and tests, and run `npm run check`. The catalog was checked on September 6, 2026 against [Claude models](https://platform.claude.com/docs/en/models/overview), [Claude structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs), [GPT-4o Mini](https://developers.openai.com/api/docs/models/gpt-4o-mini), [GPT-4.1 Mini](https://developers.openai.com/api/docs/models/gpt-4.1-mini), and [GPT-4.1](https://developers.openai.com/api/docs/models/gpt-4.1).
+
+`src/services/ai.js` dispatches to dedicated provider adapters. Claude uses `https://api.anthropic.com/v1/messages`, API version `2023-06-01`, a top-level system prompt, user seed message, `max_tokens: 1000`, and native `output_config.format` JSON schema. Anthropic does not support `maxItems`, so its native schema omits that constraint while the full contract remains in the system prompt and local validation enforces the 30-candidate ceiling. Refusals, truncation, malformed output, network/timeouts, authentication, access, model, input-limit and rate-limit errors leave saved keywords unchanged. Credentials and preferences save in a single serialized storage operation.
+
+Both providers support the complete existing AI feature: non-streaming text keyword suggestions with a 25-second timeout, strict response validation, seed exclusion, deduplication, safe rendering, dismissal and explicit approval into either list. The app has no chat history, streaming UI, tools, attachments, vision, agent execution, token usage display, configurable reasoning, or user cancellation controls; those are not advertised by the application catalog. The 1–20 seeds of at most 120 characters keep input bounded. Retry uses the same Get suggestions action. A timed-out first Claude schema compilation can be retried. No unsupported OpenAI-specific parameters are sent to Claude.
+
+In either interface, select a profile, enter 1–20 seed keywords, and click **Get suggestions**. Only those seeds are sent to the selected provider on your explicit request. For OpenAI, the endpoint is `https://api.openai.com/v1/responses`. The dedicated `src/services/openai.js` service requests a strict JSON schema with `store: false` and a 25-second timeout. The authoritative `src/services/suggestion-contract.js` schema is included in both the instructions and strict response format on every request. It defines exactly `{ "suggestions": string[] }`: a required, non-null array with at most 30 candidates and no extra fields. The prompt targets 20 candidates; the 30-item validation ceiling preserves existing compatibility. The parser validates the wire structure against that schema before applying existing keyword normalization and the 120-character domain limit. It handles authentication/quota/network errors, refusals, malformed envelopes/JSON, schema violations, and incomplete responses without extracting JSON from prose or Markdown. Suggestions are validated, bounded, deduplicated, rendered as text, and never added automatically. Select the suggestions and target list, then click **Add selected**. Use each candidate’s **Dismiss** button or **Dismiss all** to discard review candidates without changing saved keywords. Closing the panel also discards unapproved review candidates.
 
 References used for the implementation: [OpenAI structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs), [Chrome side panel API](https://developer.chrome.com/docs/extensions/reference/api/sidePanel), and [Chrome storage access levels](https://developer.chrome.com/docs/extensions/reference/api/storage).
 
@@ -106,7 +121,10 @@ src/
   matching/matcher.js      Pure typed matching and overlap resolution
   content/                 Page lifecycle, visibility filtering, mutation observer
   highlighting/            Non-destructive CSS highlight rendering
+  services/ai.js           Provider dispatch for keyword suggestions
+  services/models.js       Curated provider/model catalog and selection validation
   services/openai.js       OpenAI request/response boundary
+  services/anthropic.js    Anthropic Messages request/response boundary
 scripts/build.mjs          Reproducible local bundle into dist/
 tests/                     Core unit tests and real-extension browser checks
 docs/features.md           Product feature guide (required experience)
@@ -125,16 +143,20 @@ npx playwright install chromium
 npm run check
 ```
 
+No formatter, linter, or separate type-check command is configured; this project uses JavaScript, Node syntax checks and the build/test workflow.
+
+`npm test` also verifies provider migration, atomic settings/key saves, Claude requests and response validation/error handling. Browser checks cover provider-specific dropdowns, model persistence, masked key setup/removal, provider switching, and mocked Claude approval into both lists.
+
 `npm test` also verifies backward-compatible sidebar defaults, JSON transfer fidelity/validation/capacity, and content initialization races and listener disposal. Browser checks cover actual downloads/uploads, immediate term replacement, failure recovery, and repeated full extension reloads with Developer mode enabled. Browser checks exercise no-key popup profile editing, actionable missing-key handling, global/per-tab Chrome routing, display rollback on storage failure, and sidebar restoration across browser restart.
 
 `npm test` runs core model, literal matching, red overlap precedence, approval capacity/deduplication, storage concurrency/persistence and version rejection, and mocked API validation/error tests. `npm run test:browser` loads the actual unpacked MV3 extension in isolated Playwright Chromium, exercises profile CRUD, dynamic highlights and excluded elements, both highlight colors, negative-only profiles, shared enabled controls, settings, safe AI approval/dismissal and storage failures with a mocked network response, content-script access restrictions, popup rendering, and persistence after closing/reopening the browser. Screenshots go to ignored `test-results/`.
 
-A live OpenAI request requires your own configured key and is not made by the tests. Native Chrome panel docking and toolbar interaction should also be checked manually:
+A live request to either provider requires your own configured key and is not made by the tests. Native Chrome panel docking and toolbar interaction should also be checked manually:
 
 1. Open the popup from the toolbar with no key configured. Create/edit a profile and add/remove keywords. Enable **Use sidebar** and verify the panel opens. Close it, switch tabs, and click the toolbar icon: it should reopen in the sidebar. Disable **Use sidebar** and verify the next toolbar click opens the full popup with your data intact. Repeat after restarting Chrome.
 2. Create `AI Infrastructure` with positive `GPU`, `inference`, `data center`, and negative `gaming`.
 3. Confirm `GPU gaming` highlights GPU in yellow and gaming in red; check overlapping terms, negative-only profiles, and removal/reappearance with profile and global toggles.
-4. Configure a real API key, request suggestions, dismiss an unwanted candidate, and verify only selected suggestions are added to the chosen list.
+4. In Settings, configure each provider with your own real API key, select multiple predefined models, and switch between providers. Verify the saved model and key persist. Request suggestions with each provider, dismiss an unwanted candidate, and verify only selected suggestions are added to the chosen list.
 5. Restart Chrome and verify profiles/settings remain. Remove the key if no longer needed.
 
 ## Development prompt history

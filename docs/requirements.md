@@ -74,11 +74,11 @@ For example, five profiles may have only profiles 1, 3, and 5 enabled. Global of
 
 Settings, accessible from both interfaces, must allow the user to configure, replace, retain, and remove their own API key and configure the model. A blank key field must retain an existing key; a separate explicit removal action must delete it. Missing or invalid configuration must produce an actionable error when requesting suggestions. Manual profile management and scanning must work without an API key.
 
-ChatGPT-assisted discovery is provided through the dedicated OpenAI API service, using explicit user requests. Preserve these security and privacy requirements:
+AI-assisted discovery is provided through dedicated OpenAI and Anthropic API adapters, using explicit user requests. Preserve these security and privacy requirements:
 
 - Never hard-code or commit credentials, include them in prompts, fixtures, logs, error messages, analytics, or expose them unnecessarily.
 - Persist the key separately from profile state in local storage restricted to trusted extension contexts. Do not use sync storage. UI state must expose only whether a key exists, not the saved key value; content scripts must never receive credentials or invoke privileged configuration or AI operations.
-- Send the key only to the configured integration’s authorized HTTPS API endpoint. Send only user-entered seed terms for discovery, not webpage content. Keep network requests in the dedicated service and retain the current request setting `store: false`.
+- Send the key only to the configured integration’s authorized HTTPS API endpoint. Send only user-entered seed terms for discovery, not webpage content. Keep network requests in the dedicated service and retain `store: false` for OpenAI (it is not an Anthropic parameter).
 - Treat suggestions as untrusted data: validate bounded text, normalize and deduplicate it, and render it as text rather than HTML. Errors must be useful without leaking secrets.
 
 The current local key storage is unencrypted and assumes a trusted browser profile. Documentation and settings guidance must not describe it as encrypted or suitable for distributing a shared developer secret. Settings must explain local storage and the explicit external submission of seeds. See the [README storage and privacy details](../README.md#storage-and-privacy).
@@ -109,7 +109,7 @@ Current scope excludes shadow DOM, iframes, PDFs, canvas text, browser-internal 
 
 Persist profiles, both lists, independent/global states, and preferences across browser and extension restarts through the single versioned storage abstraction. Serialize mutations, preserve unrelated profile updates, and reject unsupported schema versions without overwriting data. Same-profile concurrent edits retain the documented last-save behavior. Report extension/storage errors gracefully.
 
-Keep modules small, focused, and free of unnecessary dependencies. Matching must remain independent of UI and rendering; storage must stay behind its adapter; AI calls must stay behind the dedicated service. Global state, interface presentation, profiles, keyword persistence, scanning, rendering, AI generation, and settings must remain separate responsibilities. Additional profile rules, incremental scanning, broader document coverage, or alternative AI providers are future possibilities, not requirements for this implementation.
+Keep modules small, focused, and free of unnecessary dependencies. Matching must remain independent of UI and rendering; storage must stay behind its adapter; AI calls must stay behind the dedicated service. Global state, interface presentation, profiles, keyword persistence, scanning, rendering, AI generation, and settings must remain separate responsibilities. Additional profile rules, incremental scanning, broader document coverage, are future possibilities, not requirements for this implementation.
 
 ## Implementation status and acceptance checks
 
@@ -139,3 +139,7 @@ This table remains the acceptance contract. See the implementation log for what 
 ## R14 — Individual keyword management
 
 [Prompt 009](prompts/009-individual-keyword-editor.md) replaces combined profile keyword text fields with individual rows in both editors. Each term can be added, selected independently, edited, saved to the draft, canceled or removed with confirmation. Save profile persists the draft only after all row edits finish. Empty, whitespace-only, duplicate (case-insensitive within a group), overlength and overcapacity submissions show useful errors without replacing other terms. Existing array items, unrelated metadata, matching rules, AI approval and profile backups remain compatible; no schema migration is needed. Empty, single and many-item groups must render correctly. Selection does not alter matching and is not persisted.
+
+## R15 — Provider and model configuration
+
+[Prompt 010](prompts/010-multi-provider-model-selection.md) adds OpenAI and Anthropic provider selection, curated model dropdowns, retained custom IDs, separate masked key configuration and per-provider last-selected models. Legacy settings normalize to OpenAI without losing the stored model/key. Both adapters must implement the existing structured keyword suggestion and approval contract, with actionable errors and no automatic model fallback. See the [setup and catalog maintenance guide](../README.md#ai-providers-and-model-selection).

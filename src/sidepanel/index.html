@@ -16,7 +16,7 @@
 <h3>Keyword matching criteria</h3><p class="hint">Add word, phrase, length, structure or advanced regex criteria. These work alongside the literal keyword lists above. Save profile to apply changes.</p><div id="criteria"></div><button type="button" id="add-criterion">Add criterion</button>
 <label class="inline"><input id="profile-enabled" type="checkbox" checked> Profile enabled</label>
 <div class="actions"><button type="submit" class="primary">Save profile</button><button type="button" id="cancel-edit">Cancel</button></div></form></section>
-<section><h2>Discover related keywords</h2><p class="hint">Send seed keywords to OpenAI, review suggestions, then choose which to add. API usage may incur charges.</p>
+<section><h2>Discover related keywords</h2><p id="ai-model" class="hint"></p><p class="hint">Send seed keywords to your selected AI provider, review suggestions, then choose which to add. API usage may incur charges.</p>
 <label for="ai-profile">Add suggestions to</label><select id="ai-profile"></select>
 <label for="seeds">Seed keywords</label><textarea id="seeds" placeholder="artificial intelligence"></textarea>
 <div class="actions"><button id="suggest" class="primary">Get suggestions</button></div>
