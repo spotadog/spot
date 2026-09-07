@@ -5,58 +5,97 @@ import { MAX_IMPORT_BYTES, parseImport } from '../profiles/transfer.js';
 import { request, element, report, action, subscribe, wireGlobal, wirePageStatus } from '../ui/client.js';
 const $ = selector => document.querySelector(selector);
 if (location.pathname.startsWith('/popup/')) document.body.classList.add('popup');
-const positive = keywordEditor($('#positive'), 'Positive');
-const negative = keywordEditor($('#negative'), 'Negative');
+const markDirty = () => { dirty = true; };
+const positive = keywordEditor($('#positive'), 'Positive', markDirty);
+const negative = keywordEditor($('#negative'), 'Negative', markDirty);
 const criteria = criteriaEditor($('#criteria'));
-action($('#add-criterion'), () => criteria.add());
+action($('#add-criterion'), () => { criteria.add(); markDirty(); });
 let state, editingId = null, suggestionProfile = null;
-function edit(profile) {
+let editMode = false, dirty = false, saving = false, loadedProfile = null, refreshRevision = 0;
+function setEditMode(value) {
+  editMode = value;
+  $('#name').readOnly = !value;
+  $('#profile-enabled').disabled = !value;
+  $('#criteria-fields').disabled = !value;
+  $('#add-criterion').hidden = !value;
+  $('#save-actions').hidden = !value;
+  $('#edit-profile').hidden = !editingId || value;
+  positive.setEditable(value);
+  negative.setEditable(value);
+  $('#edit-help').textContent = value
+    ? 'Save each keyword, then choose Save profile to apply changes. Cancel returns to viewing.'
+    : 'Select a keyword to inspect it. Choose Edit to make changes.';
+}
+function view(profile, editable = false) {
   editingId = profile?.id ?? null;
-  $('#editor-title').textContent = profile ? 'Edit profile' : 'New profile';
+  loadedProfile = JSON.stringify(profile ?? null);
+  $('#editor-title').textContent = profile?.name ?? 'New profile';
   $('#name').value = profile?.name ?? '';
+  $('#keyword-search').value = '';
+  positive.filter(''); negative.filter('');
   positive.load(profile?.positiveKeywords);
   negative.load(profile?.negativeKeywords);
   criteria.load(profile?.rules?.criteria);
   $('#profile-enabled').checked = profile?.enabled ?? true;
-  $('#editor').hidden = false;
-  $('#name').focus();
+  $('#editor').hidden = !profile && !editable;
+  $('#delete-profile').hidden = !profile;
+  $('#export-single').disabled = !profile;
+  if (profile) $('#profile-select option[value=""]')?.remove();
+  if (editable && !profile && !$('#profile-select option[value=""]')) $('#profile-select').prepend(element('option', 'New profile (unsaved)', { value: '' }));
+  $('#profile-select').value = editingId ?? '';
+  setEditMode(editable);
+  dirty = false;
 }
+function canLeave() {
+  return !!state && !saving && (!dirty || confirm('Discard unsaved profile changes?'));
+}
+$('#profile-select').addEventListener('change', () => {
+  const id = $('#profile-select').value;
+  if (!canLeave()) { $('#profile-select').value = editingId ?? ''; return; }
+  view(state.profiles.find(profile => profile.id === id));
+  report('');
+});
+$('#keyword-search').addEventListener('input', event => {
+  positive.filter(event.target.value); negative.filter(event.target.value);
+});
+$('#profile-form').addEventListener('input', event => {
+  if (editMode && event.target.matches('#name, #profile-enabled, #criteria input, #criteria select')) markDirty();
+});
+$('#criteria').addEventListener('click', event => {
+  if (event.target.closest('button')) markDirty();
+});
+action($('#edit-profile'), () => { if (!saving) { setEditMode(true); $('#name').focus(); } });
+action($('#delete-profile'), async () => {
+  if (saving || !editingId || !confirm(`Delete “${$('#name').value}” and its keywords, including unsaved changes?`)) return;
+  await request('profile.delete', { id: editingId });
+  editMode = dirty = false; editingId = null;
+  await refresh();
+  report('Profile deleted.');
+});
 async function refresh() {
-  state = await request('state.get');
+  const revision = ++refreshRevision;
+  const latest = await request('state.get');
+  if (revision !== refreshRevision) return;
+  state = latest;
   $('#global-enabled').checked = state.enabled;
   $('#sidebar-mode').checked = state.preferences.sidebar;
   $('#show-sidebar').hidden = !state.preferences.sidebar;
   $('#ai-model').textContent = `${providers[state.preferences.provider]?.name ?? 'Unsupported provider'} — ${state.preferences.model}`;
   if (state.hasApiKey) $('#configure-key').hidden = true;
   $('#global-note').textContent = state.enabled ? 'Matching enabled profiles on supported web pages.' : 'Paused. Highlights are removed; profiles remain saved.';
-  $('#profiles').replaceChildren();
-  if (!state.profiles.length) $('#profiles').append(element('p', 'Start with a profile for a topic you care about.', { className: 'empty' }));
-  for (const profile of state.profiles) {
-    const card = element('article', undefined, { className: 'card' });
-    const row = element('div', undefined, { className: 'row' });
-    const label = element('label', undefined, { className: 'inline' });
-    const toggle = element('input', undefined, { type: 'checkbox', checked: profile.enabled });
-    toggle.addEventListener('change', async () => {
-      try { await request('profile.toggle', { id: profile.id, enabled: toggle.checked }); }
-      catch (error) { toggle.checked = !toggle.checked; report(error); }
-    });
-    label.append(toggle, element('span', profile.name));
-    row.append(label, element('span', profile.enabled ? 'On' : 'Off', { className: 'badge' }));
-    const editButton = element('button', 'Edit');
-    action(editButton, () => edit(profile));
-    const deleteButton = element('button', 'Delete', { className: 'danger' });
-    action(deleteButton, async () => {
-      if (!confirm(`Delete “${profile.name}” and its keywords?`)) return;
-      await request('profile.delete', { id: profile.id });
-      if (editingId === profile.id) $('#editor').hidden = true;
-      report('Profile deleted.');
-    });
-    const actions = element('div', undefined, { className: 'actions' });
-    const downloadButton = element('button', 'Download profile');
-    action(downloadButton, () => download('single', profile.id));
-    actions.append(editButton, downloadButton, deleteButton);
-    card.append(row, element('p', `${profile.positiveKeywords.length} positive · ${profile.negativeKeywords.length} negative · ${profile.rules?.criteria?.length ?? 0} criteria`, { className: 'hint' }), actions);
-    $('#profiles').append(card);
+  const selector = $('#profile-select');
+  selector.replaceChildren(...state.profiles.map(p => element('option', p.name, { value: p.id })));
+  if (!state.profiles.length) selector.append(element('option', 'No profiles available', { value: '' }));
+  if (editMode && !state.profiles.some(p => p.id === editingId)) {
+    selector.prepend(element('option', editingId ? 'Deleted profile (unsaved draft)' : 'New profile (unsaved)', { value: editingId ?? '' }));
+  }
+  selector.disabled = saving || !state.profiles.length;
+  $('#profiles-empty').hidden = !!state.profiles.length;
+  selector.value = editingId ?? '';
+  // Broadcasts must not replace a draft or reset search/selection for unrelated changes.
+  if (!editMode && !saving) {
+    const profile = state.profiles.find(p => p.id === editingId) ?? state.profiles[0];
+    if (JSON.stringify(profile ?? null) !== loadedProfile) view(profile);
   }
   const selected = $('#ai-profile').value;
   $('#ai-profile').replaceChildren(...state.profiles.map(p => element('option', p.name, { value: p.id })));
@@ -83,20 +122,30 @@ $('#sidebar-mode').addEventListener('change', async () => {
   finally { toggle.disabled = false; await refresh().catch(report); }
 });
 action($('#configure-key'), () => chrome.runtime.openOptionsPage());
-action($('#new-profile'), () => edit());
-action($('#cancel-edit'), () => { $('#editor').hidden = true; });
+action($('#new-profile'), () => { if (canLeave()) { view(undefined, true); report(''); $('#name').focus(); } });
+action($('#cancel-edit'), () => { if (canLeave()) { view(state.profiles.find(p => p.id === editingId) ?? state.profiles[0]); report(''); $('#edit-profile').focus(); } });
 action($('#settings'), () => chrome.runtime.openOptionsPage());
 $('#profile-form').addEventListener('submit', async event => {
   event.preventDefault();
-  const button = event.submitter;
+  if (!editMode || saving) return;
+  const button = event.submitter ?? $('#save-actions button[type=submit]');
+  saving = true;
   button.disabled = true;
+  $('#profile-select').disabled = true;
   try {
-    await request('profile.save', { profile: { id: editingId, name: $('#name').value, positiveKeywords: positive.read(), negativeKeywords: negative.read(), enabled: $('#profile-enabled').checked, criteria: criteria.read() } });
-    $('#editor').hidden = true;
+    const profile = { id: editingId, name: $('#name').value, positiveKeywords: positive.read(), negativeKeywords: negative.read(), enabled: $('#profile-enabled').checked, criteria: criteria.read() };
+    $('#profile-form').inert = true;
+    report('Saving profile…');
+    const saved = await request('profile.save', { profile });
+    editingId = saved.id;
+    editMode = dirty = false;
+    loadedProfile = null;
+    saving = false;
     report('Profile saved.');
     await refresh();
+    $('#edit-profile').focus();
   } catch (error) { report(error); }
-  finally { button.disabled = false; }
+  finally { saving = false; button.disabled = false; $('#profile-form').inert = false; $('#profile-select').disabled = !state.profiles.length; }
 });
 $('#ai-profile').addEventListener('change', clearSuggestions);
 action($('#suggest'), async () => {
@@ -132,7 +181,7 @@ action($('#dismiss-suggestions'), () => { clearSuggestions(); report('Suggestion
 action($('#add-suggestions'), async () => {
   const keywords = [...$('#suggestions').querySelectorAll('input:checked')].map(input => input.value);
   if (!keywords.length) throw new Error('Select at least one suggestion.');
-  if (!$('#editor').hidden && editingId === suggestionProfile) throw new Error('Save or cancel your profile edits before adding suggestions.');
+  if (editMode && editingId === suggestionProfile) throw new Error('Save or cancel your profile edits before adding suggestions.');
   await request('profile.addKeywords', { id: suggestionProfile, keywords, target: $('#target').value });
   clearSuggestions();
   report('Selected keywords added.');
@@ -153,7 +202,9 @@ async function download(scope, id) {
 }
 let importScope = 'all';
 action($('#export-all'), () => download('all'));
+action($('#export-single'), () => download('single', editingId));
 for (const scope of ['all', 'single']) action($(`#import-${scope}`), () => {
+  if (saving) return;
   importScope = scope;
   $('#import-file').value = '';
   $('#import-file').click();
@@ -170,7 +221,8 @@ $('#import-file').addEventListener('change', async () => {
     if (!profiles.length) { report('No profiles to import. Existing profiles are unchanged.'); return; }
     if (!confirm(`Import ${profiles.length} profile(s)? Matching IDs will be replaced, including their words. Other profiles remain. Unsaved edits and suggestion reviews will close.`)) return;
     const result = await request('profiles.import', { scope, text });
-    $('#editor').hidden = true;
+    editMode = dirty = false;
+    loadedProfile = null;
     clearSuggestions();
     await refresh();
     report(result.warning || `Imported ${result.count} profile(s). Highlights refreshed.`);

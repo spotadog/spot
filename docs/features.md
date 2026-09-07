@@ -19,7 +19,9 @@ Spot a Dog helps you quickly scan webpages by highlighting words and phrases rel
 
 Manage profiles and keywords in either the popup or side panel, with no API key required. **Use sidebar** selects the display location and does not change your profiles or scanning state. Both views share your saved global and profile states and link to settings. Closing either view does not turn Spot a Dog off; use the global switch to stop scanning. You can manage configuration even while scanning is off. Save profile edits before closing the editor if you want to keep them.
 
-Use **Add Keyword** to enter one term, **Save keyword** to finish that row, and **Save profile** to apply changes. Each row has an independent selection checkbox, **Edit**, and confirmed **Remove** action. Blank or duplicate terms show an inline error.
+Choose a profile from the **Profile** dropdown to view its read-only details. Type in **Search keywords** to filter its positive and negative terms immediately. Selection remains available while viewing; choose **Edit** to change details or keywords. Switching profiles resets search and row selection, with confirmation before discarding changed drafts. Import/export actions live in **Profile backups** at the bottom.
+
+While editing, use **Add Keyword** to enter one term, **Save keyword** to finish that row, and **Save profile** to apply changes. Each row has an independent selection checkbox, **Edit**, and confirmed **Remove** action. Blank or duplicate terms show an inline error.
 
 For example, a profile named **AI Infrastructure** could contain positive terms `GPU`, `inference`, and `data center`, and negative terms `gaming` and `graphics settings`. The required behavior highlights positives in yellow and negatives in red. If the same characters match both kinds, red takes precedence. You can enable this profile alongside other interests or disable it independently.
 

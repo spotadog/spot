@@ -1,3 +1,4 @@
+import { checkProfileView } from './profile-view.mjs';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, mkdir, readFile } from 'node:fs/promises';
@@ -35,6 +36,9 @@ try {
   const panel = await context.newPage();
   panel.on('pageerror', e => errors.push(e.message));
   await panel.goto(`chrome-extension://${id}/popup/index.html`);
+  await panel.getByText('No profiles yet. Choose New profile to start.', { exact: true }).waitFor();
+  assert.equal(await panel.locator('#profile-select').isEnabled(), false);
+  assert.equal(await panel.locator('#editor').isVisible(), false);
   await panel.getByRole('button', { name: 'New profile' }).click();
   await panel.getByLabel('Profile name').fill('AI Infrastructure');
   for (const term of ['GPU', 'inference', 'data center']) await addKeyword(panel, 'positive', term);
@@ -63,9 +67,15 @@ try {
   await waitFor(site, () => !CSS.highlights.has('spotadog-matches') && !CSS.highlights.has('spotadog-negative'));
   await panel.getByLabel('Highlight pages').check();
   await waitFor(site, () => CSS.highlights.get('spotadog-matches')?.size === 5);
-  await panel.getByLabel('AI Infrastructure', { exact: true }).uncheck();
+  await panel.locator('#edit-profile').click();
+  await panel.getByLabel('Profile enabled', { exact: true }).uncheck();
+  await panel.getByRole('button', { name: 'Save profile' }).click();
+  await panel.getByText('Profile saved.', { exact: true }).waitFor();
   await waitFor(site, () => !CSS.highlights.has('spotadog-matches') && !CSS.highlights.has('spotadog-negative'));
-  await panel.getByLabel('AI Infrastructure', { exact: true }).check();
+  await panel.locator('#edit-profile').click();
+  await panel.getByLabel('Profile enabled', { exact: true }).check();
+  await panel.getByRole('button', { name: 'Save profile' }).click();
+  await panel.getByText('Profile saved.', { exact: true }).waitFor();
   await waitFor(site, () => CSS.highlights.get('spotadog-matches')?.size === 5);
   await panel.getByRole('button', { name: 'Edit', exact: true }).click();
   await clearKeywords(panel, 'positive');
@@ -169,9 +179,15 @@ try {
     return (await chrome.runtime.sendMessage({ type: 'state.get' })).data.profiles[1].id;
   });
   await waitFor(site, () => !CSS.highlights.has('spotadog-matches') && CSS.highlights.get('spotadog-negative')?.size === 6);
-  await panel.getByLabel('AI Infrastructure', { exact: true }).uncheck();
+  await panel.locator('#edit-profile').click();
+  await panel.getByLabel('Profile enabled', { exact: true }).uncheck();
+  await panel.getByRole('button', { name: 'Save profile' }).click();
+  await panel.getByText('Profile saved.', { exact: true }).waitFor();
   await waitFor(site, () => CSS.highlights.get('spotadog-negative')?.size === 4);
-  await panel.getByLabel('AI Infrastructure', { exact: true }).check();
+  await panel.locator('#edit-profile').click();
+  await panel.getByLabel('Profile enabled', { exact: true }).check();
+  await panel.getByRole('button', { name: 'Save profile' }).click();
+  await panel.getByText('Profile saved.', { exact: true }).waitFor();
   await panel.evaluate(async id => { await chrome.runtime.sendMessage({ type: 'profile.delete', id }); }, secondary);
   await waitFor(site, () => CSS.highlights.get('spotadog-matches')?.size === 4 && CSS.highlights.get('spotadog-negative')?.size === 2);
   // Dismissing the entire review, including selected candidates, never writes.
@@ -225,7 +241,7 @@ try {
   assert.equal(JSON.stringify(access.publicState).includes('test-placeholder'), false);
   const popup = await context.newPage();
   await popup.goto(`chrome-extension://${id}/popup/index.html`);
-  await popup.getByLabel('AI Infrastructure', { exact: true }).waitFor();
+  await popup.getByRole('heading', { name: 'AI Infrastructure', exact: true }).waitFor();
   await popup.getByLabel('Highlight pages').uncheck();
   await panel.waitForFunction(() => !document.querySelector('#global-enabled').checked);
   await waitFor(site, () => CSS.highlights.size === 0);
@@ -234,7 +250,7 @@ try {
   await popup.close();
   await waitFor(site, () => CSS.highlights.get('spotadog-negative')?.size === 2);
   await panel.reload();
-  await panel.getByLabel('AI Infrastructure', { exact: true }).waitFor();
+  await panel.getByRole('heading', { name: 'AI Infrastructure', exact: true }).waitFor();
   assert.equal(await panel.locator('#review').isVisible(), false);
   await mkdir('test-results', { recursive: true });
   await panel.setViewportSize({ width: 380, height: 1000 });
@@ -294,7 +310,7 @@ try {
   context = await launch();
   const restored = await context.newPage();
   await restored.goto(`chrome-extension://${id}/sidepanel/index.html`);
-  await restored.getByLabel('AI Infrastructure', { exact: true }).waitFor();
+  await restored.getByRole('heading', { name: 'AI Infrastructure', exact: true }).waitFor();
   const persisted = await restored.evaluate(async () => (await chrome.runtime.sendMessage({ type: 'state.get' })).data);
   assert.deepEqual(persisted.profiles[0].positiveKeywords, ['GPU', 'CUDA', 'LLM']);
   assert.deepEqual(persisted.profiles[0].negativeKeywords, ['gaming', 'LLM']);
@@ -314,11 +330,11 @@ try {
   // Real downloads/uploads and scanning refresh share the production worker/storage path.
   restored.on('dialog', dialog => dialog.accept());
   const backupPromise = restored.waitForEvent('download');
-  await restored.getByRole('button', { name: 'Download all profiles', exact: true }).click();
+  await restored.getByRole('button', { name: 'Export Profiles', exact: true }).click();
   const backup = await backupPromise;
   const allText = await readFile(await backup.path(), 'utf8');
   const onePromise = restored.waitForEvent('download');
-  await restored.getByRole('button', { name: 'Download profile', exact: true }).click();
+  await restored.getByRole('button', { name: 'Export Profile', exact: true }).click();
   const oneText = await readFile(await (await onePromise).path(), 'utf8');
   const one = JSON.parse(oneText);
   assert.deepEqual(one.profiles, JSON.parse(allText).profiles);
@@ -327,7 +343,7 @@ try {
   await waitFor(importPage, () => CSS.highlights.get('spotadog-matches')?.size === 2);
   const upload = async (scope, text, name = 'profiles.json') => {
     const chooser = restored.waitForEvent('filechooser');
-    await restored.getByRole('button', { name: scope === 'single' ? 'Import one profile' : 'Import all profiles', exact: true }).click();
+    await restored.getByRole('button', { name: scope === 'single' ? 'Import Profile' : 'Import Profiles', exact: true }).click();
     await (await chooser).setFiles({ name, mimeType: 'application/json', buffer: Buffer.from(text) });
   };
   one.profiles[0].positiveKeywords = ['inference'];
@@ -403,6 +419,9 @@ try {
       return words.length === (term === 'GPU' ? 2 : 1) && words.every(word => word === term) && !CSS.highlights.has('spotadog-negative');
     }, term);
   }
+  // The reload lifecycle checks above use a deliberately reinjected page. Start the
+  // independent criterion matrix with a fresh document and content-script context.
+  await importPage.reload();
   // Exercise every selectable type through the shared editor and real page scanner.
   const criteriaPanel = await context.newPage();
   criteriaPanel.on('pageerror', e => errors.push(e.message));
@@ -440,7 +459,15 @@ try {
     await importPage.evaluate(text => { document.body.replaceChildren(Object.assign(document.createElement('p'), { textContent: text })); }, text);
     await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
     await criteriaPanel.getByText('Profile saved.', { exact: true }).waitFor();
-    await importPage.waitForFunction(expected => JSON.stringify([...(CSS.highlights.get('spotadog-matches') ?? [])].map(r => r.toString())) === JSON.stringify(expected), expected);
+    try {
+      await importPage.waitForFunction(expected => JSON.stringify([...(CSS.highlights.get('spotadog-matches') ?? [])].map(r => r.toString())) === JSON.stringify(expected), expected);
+    } catch (error) {
+      const actual = await importPage.evaluate(() => [...(CSS.highlights.get('spotadog-matches') ?? [])].map(r => r.toString()));
+      const saved = await criteriaPanel.evaluate(async () => (await chrome.runtime.sendMessage({ type: 'state.get' })).data.profiles);
+      const ui = await criteriaPanel.locator('#criteria').innerHTML();
+      console.error(JSON.stringify({ saved, ui }));
+      throw new Error(`Criterion ${type}: expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`, { cause: error });
+    }
   }
   await criteriaPanel.getByRole('button', { name: 'Edit', exact: true }).click();
   await criteriaPanel.getByLabel('Regular expression').fill('[');
@@ -563,6 +590,7 @@ try {
   await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
   await criteriaPanel.getByText('Profile saved.', { exact: true }).waitFor();
   assert.deepEqual(await criteriaPanel.evaluate(async () => (await chrome.runtime.sendMessage({ type: 'state.get' })).data.profiles[0].positiveKeywords), [...many.slice(0, -1), 'replacement']);
+  await checkProfileView(criteriaPanel, id);
   assert.deepEqual(errors, []);
   console.log('Browser checks passed: real MV3 loading, profile CRUD, matching/exclusions, dynamic content, toggles, settings, mocked AI review, safe rendering, popup, persistence across browser restart, profile transfers/failures, and repeated extension reloads.');
 } finally {

@@ -1,7 +1,7 @@
 :root { font-family: system-ui, -apple-system, sans-serif; color: #24332e; background: #f6f7f3; font-size: 14px; color-scheme: light; }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 280px; }
-body.popup { width: 420px; max-height: 600px; overflow-y: auto; }
+body.popup { width: min(420px, 100vw); max-height: 600px; overflow-y: auto; }
 main { max-width: 680px; margin: auto; padding: 22px; }
 header { margin-bottom: 22px; }
 h1 { font-size: 24px; letter-spacing: -.8px; margin: 0 0 5px; }
@@ -46,3 +46,7 @@ button:disabled { cursor: wait; opacity: .55; }
 .keyword-error:empty { display: none; }
 
 .keyword-rows { max-height: 380px; overflow-y: auto; padding: 4px; }
+
+#profiles { margin-bottom: 14px; }
+#editor-title { overflow-wrap: anywhere; }
+input[readonly] { background: #f6f7f3; }

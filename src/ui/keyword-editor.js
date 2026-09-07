@@ -2,12 +2,17 @@ import { validateKeyword } from '../profiles/model.js';
 import { element, report } from './client.js';
 
 // Each row owns its value and selection; storage continues to use individual array items.
-export function keywordEditor(container, title) {
+export function keywordEditor(container, title, onChange = () => {}) {
   const list = element('div', undefined, { className: 'keyword-rows' });
   const empty = element('p', 'No keywords yet. Choose Add Keyword to start.', { className: 'hint' });
   const add = element('button', 'Add Keyword', { type: 'button' });
-  let rows = [];
-  function update() { empty.hidden = rows.length > 0; }
+  let rows = [], editable = false, query = '';
+  function update() {
+    for (const item of rows) item.row.hidden = !item.editing && !item.value?.toLowerCase().includes(query);
+    empty.hidden = rows.some(item => !item.row.hidden);
+    empty.textContent = rows.length ? 'No keywords match your search.' : editable ? 'No keywords yet. Choose Add Keyword to start.' : 'No keywords yet.';
+    add.hidden = !editable;
+  }
   function append(value = null) {
     const row = element('div', undefined, { className: 'keyword-row' });
     const label = element('label', undefined, { className: 'inline' });
@@ -23,32 +28,37 @@ export function keywordEditor(container, title) {
     const actions = element('div', undefined, { className: 'actions' });
     actions.append(edit, save, cancel, remove);
     row.append(label, input, error, actions);
-    const record = { value, row, editing: value === null };
+    const record = { value, row, editing: value === null, render };
     rows.push(record);
     function render() {
       text.textContent = record.value ?? 'New keyword';
       selected.ariaLabel = `Select ${record.value ?? 'new keyword'}`;
       row.classList.toggle('selected', selected.checked);
       input.hidden = save.hidden = cancel.hidden = !record.editing;
-      edit.hidden = record.editing;
-      remove.hidden = record.value === null;
+      edit.hidden = !editable || record.editing;
+      remove.hidden = !editable || record.value === null;
+      actions.hidden = !editable;
       error.textContent = '';
     }
     function discard() {
       const index = rows.indexOf(record);
       rows.splice(index, 1);
       row.remove();
+      onChange();
       update();
       (rows[Math.min(index, rows.length - 1)]?.row.querySelector('input') ?? add).focus();
     }
     selected.addEventListener('change', () => row.classList.toggle('selected', selected.checked));
+    input.addEventListener('input', onChange);
     edit.addEventListener('click', () => { record.editing = true; input.value = record.value; render(); input.focus(); row.scrollIntoView({ block: 'nearest' }); });
     save.addEventListener('click', () => {
       try {
         record.value = validateKeyword(input.value, rows.filter(item => item !== record && item.value !== null).map(item => item.value));
         record.editing = false;
         render();
-        edit.focus();
+        onChange();
+        update();
+        (row.hidden ? add : edit).focus();
         report('Keyword saved in this draft. Choose Save profile to apply changes.');
       } catch (failure) { error.textContent = failure.message; input.focus(); }
     });
@@ -58,7 +68,7 @@ export function keywordEditor(container, title) {
     });
     cancel.addEventListener('click', () => {
       if (record.value === null) discard();
-      else { record.editing = false; render(); edit.focus(); }
+      else { record.editing = false; render(); update(); edit.focus(); }
     });
     remove.addEventListener('click', () => { if (confirm(`Remove “${record.value}”? Save profile to apply this change.`)) discard(); });
     list.append(row);
@@ -66,9 +76,11 @@ export function keywordEditor(container, title) {
     update();
     if (value === null) { input.focus(); row.scrollIntoView({ block: 'nearest' }); }
   }
-  add.addEventListener('click', () => append());
+  add.addEventListener('click', () => { if (editable) { append(); onChange(); } });
   container.append(list, empty, add);
   return {
+    setEditable(value) { editable = value; rows.forEach(item => item.render()); update(); },
+    filter(value) { query = value.toLowerCase(); update(); },
     load(values = []) { rows = []; list.replaceChildren(); values.forEach(append); update(); },
     read() {
       const pending = rows.find(item => item.editing);

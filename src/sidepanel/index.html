@@ -5,21 +5,24 @@
 <p id="page-status" class="hint" role="status"></p>
 <p id="status" role="status" aria-live="polite"></p>
 <div class="row"><h2>Keyword profiles</h2><button id="new-profile">New profile</button></div>
-<div class="actions"><button id="export-all">Download all profiles</button><button id="import-all">Import all profiles</button><button id="import-single">Import one profile</button></div>
-<p class="hint">Import JSON backups. Matching IDs are replaced; other profiles stay.</p><input id="import-file" type="file" accept=".json,application/json" hidden>
-<div id="profiles"></div>
+<label for="profile-select">Profile</label><select id="profile-select" disabled><option>Loading profiles…</option></select>
+<p id="profiles-empty" class="empty" hidden>No profiles yet. Choose New profile to start.</p>
+<div id="profiles" class="actions"><button id="edit-profile" hidden>Edit</button><button id="delete-profile" class="danger" hidden>Delete</button></div>
 <section id="editor" hidden><h2 id="editor-title">New profile</h2><form id="profile-form">
 <label for="name">Profile name</label><input id="name" required maxlength="80" placeholder="e.g. AI Infrastructure">
-<p class="hint">Add one keyword at a time. Select a row using its checkbox. Save each keyword, then choose Save profile to apply your changes. Cancel closes the profile without applying changes.</p>
+<p id="edit-help" class="hint">Select a keyword to inspect it. Choose Edit to make changes.</p>
+<label for="keyword-search">Search keywords</label><input id="keyword-search" type="search" placeholder="Filter this profile’s keywords">
 <fieldset class="keyword-list"><legend>Positive keywords</legend><small>Highlighted in yellow with an underline.</small><div id="positive"></div></fieldset>
 <fieldset class="keyword-list"><legend>Negative keywords</legend><small>Highlighted in red. Red takes precedence where terms overlap.</small><div id="negative"></div></fieldset>
-<h3>Keyword matching criteria</h3><p class="hint">Add word, phrase, length, structure or advanced regex criteria. These work alongside the literal keyword lists above. Save profile to apply changes.</p><div id="criteria"></div><button type="button" id="add-criterion">Add criterion</button>
+<h3>Keyword matching criteria</h3><p class="hint">Add word, phrase, length, structure or advanced regex criteria. These work alongside the literal keyword lists above. Save profile to apply changes.</p><fieldset id="criteria-fields" class="keyword-list"><div id="criteria"></div></fieldset><button type="button" id="add-criterion">Add criterion</button>
 <label class="inline"><input id="profile-enabled" type="checkbox" checked> Profile enabled</label>
-<div class="actions"><button type="submit" class="primary">Save profile</button><button type="button" id="cancel-edit">Cancel</button></div></form></section>
+<div id="save-actions" class="actions"><button type="submit" class="primary">Save profile</button><button type="button" id="cancel-edit">Cancel</button></div></form></section>
 <section><h2>Discover related keywords</h2><p id="ai-model" class="hint"></p><p class="hint">Send seed keywords to your selected AI provider, review suggestions, then choose which to add. API usage may incur charges.</p>
 <label for="ai-profile">Add suggestions to</label><select id="ai-profile"></select>
 <label for="seeds">Seed keywords</label><textarea id="seeds" placeholder="artificial intelligence"></textarea>
 <div class="actions"><button id="suggest" class="primary">Get suggestions</button></div>
 <button id="configure-key" hidden>Configure API key</button>
 <div id="review" hidden><p class="hint">Nothing is added until you select suggestions and click Add selected.</p><div id="suggestions"></div><label for="target">Keyword list</label><select id="target"><option value="positiveKeywords">Positive keywords</option><option value="negativeKeywords">Negative keywords</option></select><div class="actions"><button id="add-suggestions">Add selected</button><button id="dismiss-suggestions">Dismiss all</button></div></div></section>
+<section id="profile-transfers"><h2>Profile backups</h2><div class="actions"><button id="export-all">Export Profiles</button><button id="export-single" disabled>Export Profile</button><button id="import-all">Import Profiles</button><button id="import-single">Import Profile</button></div>
+<p class="hint">Export saved profiles as JSON. Import replaces matching IDs; other profiles stay.</p><input id="import-file" type="file" accept=".json,application/json" hidden></section>
 </main><script type="module" src="index.js"></script></body></html>

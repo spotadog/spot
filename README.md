@@ -37,7 +37,7 @@ For manual acceptance, check the pinned icon at normal and high-DPI display scal
 ## Capabilities
 
 - Multiple named profiles with stable IDs, enabled states, and creation/update timestamps.
-- Create, edit, delete, and toggle profiles in the popup or side panel; select individual keyword rows, edit and save each keyword, or remove a keyword with confirmation.
+- Select profiles from a dropdown in the popup or side panel; view and search their keywords, then enable Edit to change details, toggle the profile, add/edit keywords, or remove keywords with confirmation.
 - Global pause removes highlights and disconnects scanning observers while preserving profiles.
 - Case-insensitive literal words and phrases, repeated matches, flexible whitespace, and Unicode-aware word boundaries.
 - [17 selectable keyword match criteria](docs/keyword-match-criteria.md): word/phrase operations, word lengths, numbers, URLs, email, hashtags, mentions and advanced regex in both editors.
@@ -48,7 +48,9 @@ For manual acceptance, check the pinned icon at normal and high-DPI display scal
 
 ## Managing individual keywords
 
-In either editor, **Add Keyword** creates one row in the positive or negative group. Enter one word or phrase and choose **Save keyword**. Select any row with its checkbox; selection is independent and does not change highlighting. **Edit** opens only that keyword. **Cancel** restores its previous value or discards a new row. **Remove** asks for confirmation. Choose **Save profile** to persist additions, edits and removals; canceling or closing the profile editor discards the draft.
+Choose a profile from **Profile** to view its details. Profiles are read-only by default. **Search keywords** filters both keyword groups immediately using case-insensitive partial matches; clearing it restores every row. Switching profiles resets search and keyword selection. Select a keyword with its checkbox to inspect its full text and group; selection stays when you enable **Edit**.
+
+Choose **Edit** to change the profile name, enabled state, matching criteria or keywords. In either editor, **Add Keyword** creates one row in the positive or negative group. Enter one word or phrase and choose **Save keyword**. Select any row with its checkbox; selection is independent and does not change highlighting. **Edit** opens only that keyword. **Cancel** restores its previous value or discards a new row. **Remove** asks for confirmation. Choose **Save profile** to persist additions, edits and removals; **Cancel** returns to viewing. Switching profiles, starting another profile, or canceling asks before discarding changed drafts. Closing the popup/page still discards unsaved edits, as before. Background updates retain an open draft.
 
 Blank values and duplicates within the same group are rejected with a message beside the keyword. Matching ignores case for duplicates; surrounding whitespace is trimmed and repeated whitespace is collapsed. A keyword can belong to both positive and negative groups. Each group allows 200 keywords of up to 120 characters. Punctuation is literal, so a comma does not create another keyword. Empty groups are supported.
 
@@ -56,7 +58,7 @@ Keywords already persist as individual strings in `positiveKeywords` and `negati
 
 ## Profile import and export
 
-In the popup or sidebar, choose **Download all profiles** to back up the collection, or **Download profile** on a profile card for one saved profile. Unsaved edits are not exported. Choose **Import all profiles** or **Import one profile**, select a `.json` file, and confirm the import. Success and validation errors appear above the profile list.
+The **Profile backups** section at the bottom of the popup or sidebar contains **Export Profiles** for the collection and **Export Profile** for the selected saved profile. Unsaved edits are not exported. Choose **Import Profiles** or **Import Profile**, select a `.json` file, and confirm the import. Success and validation errors appear above the profile selector.
 
 Files use UTF-8 JSON: `{ "format": "spotadog.profiles", "version": 1, "scope": "all", "profiles": [...] }`. Individual exports use `"scope": "single"` and exactly one profile. Both preserve IDs, names, positive/negative keywords, enabled states, timestamps and rules (including optional matching `criteria` and legacy `negativeScope`). Global pause, display/model preferences, API keys and runtime highlights are excluded.
 

@@ -91,6 +91,7 @@ async function handle(message, sender) {
     const { provider, model } = (await store.read()).preferences;
     return suggestKeywords({ provider, model, apiKey: await store.getKey(provider), seeds: message.seeds });
   }
+  let savedProfileId;
   await store.update(s => {
     switch (message.type) {
       case 'global.set':
@@ -101,6 +102,7 @@ async function handle(message, sender) {
         if (message.profile?.id && !previous) throw new Error('This profile was deleted. Create a new profile.');
         if (!previous && s.profiles.length >= 50) throw new Error('You can save up to 50 profiles.');
         const profile = makeProfile(message.profile ?? {}, previous);
+        savedProfileId = profile.id;
         return { ...s, profiles: previous ? s.profiles.map(p => p.id === profile.id ? profile : p) : [...s.profiles, profile] };
       }
       case 'profile.toggle':
@@ -123,7 +125,7 @@ async function handle(message, sender) {
     }
   });
   await broadcast();
-  return true;
+  return savedProfileId ? { id: savedProfileId } : true;
 }
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (!message?.type || ['state.changed', 'ui.changed'].includes(message.type)) return;
