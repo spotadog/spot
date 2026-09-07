@@ -193,3 +193,11 @@ Prompt 002 is the repository's only publication workflow: current `main` branch,
 - Validation: 76 unit tests passed, 43 local Markdown file targets resolved, complete prompt preservation and git diff --check passed. No dedicated documentation validation script exists. No browser testing or live AI requests.
 - Publication: current main, existing SSH identity, no new branch; origin fetched. Invalid GitHub CLI authentication requires the documented repository/commit review-note fallback.
 - Issues/next steps: no runtime privacy conflict found; maintain the audited boundary when extending services, dependencies, permissions or persistence. User handles live browser verification separately.
+
+## Rebuilding guidance and publication — prompts 022–023
+
+- Request: publish the application rebuilding guidance using the documented GitHub flow; complete requests are preserved in prompts 022 and 023.
+- Changes: README explains sequential prompt replay, independent reimplementation, behavior preservation, precedence and reproducibility. Links use the actual docs/prompts/ directory; prompt 022 preserves the original wording.
+- Validation: existing README content is preserved, local README links resolve, prompt numbering is continuous through 023, and git diff --check passed. Documentation-only changes; extension tests were not rerun.
+- Publication: existing main branch, no new branch; fetched origin and confirmed no divergence. Use the existing SSH identity documented in prompt 002. GitHub CLI authentication remains invalid, so repository notes and the commit description provide the documented fallback for standalone comments.
+- Issues/next steps: no documentation blocker found. Review the rendered README on GitHub; independent reconstruction from the prompt history has not been tested.
