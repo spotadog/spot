@@ -4,7 +4,10 @@
 <section><label class="inline"><input type="checkbox" id="sidebar-mode"> Use sidebar</label><p class="hint">Choose where Spot a Dog opens. Profiles and keywords work in either view.</p><button id="show-sidebar" hidden>Show sidebar</button></section>
 <p id="page-status" class="hint" role="status"></p>
 <p id="status" role="status" aria-live="polite"></p>
-<div class="row"><h2>Keyword profiles</h2><button id="new-profile">New profile</button></div><div id="profiles"></div>
+<div class="row"><h2>Keyword profiles</h2><button id="new-profile">New profile</button></div>
+<div class="actions"><button id="export-all">Download all profiles</button><button id="import-all">Import all profiles</button><button id="import-single">Import one profile</button></div>
+<p class="hint">Import JSON backups. Matching IDs are replaced; other profiles stay.</p><input id="import-file" type="file" accept=".json,application/json" hidden>
+<div id="profiles"></div>
 <section id="editor" hidden><h2 id="editor-title">New profile</h2><form id="profile-form">
 <label for="name">Profile name</label><input id="name" required maxlength="80" placeholder="e.g. AI Infrastructure">
 <label for="positive">Positive keywords</label><textarea id="positive" placeholder="GPU&#10;inference&#10;data center"></textarea><small>One word or phrase per line. These are highlighted in yellow with an underline.</small>

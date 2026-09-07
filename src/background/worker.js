@@ -1,6 +1,7 @@
 import { createStore, scanningState } from '../storage/store.js';
 import { makeProfile, mergeKeywords } from '../profiles/model.js';
 import { suggestKeywords } from '../services/openai.js';
+import { exportProfiles, parseImport, mergeProfiles } from '../profiles/transfer.js';
 const store = createStore();
 async function applyDisplay(sidebar) {
   // Global options intentionally omit tabId so every tab uses the saved mode.
@@ -26,34 +27,67 @@ function setDisplay(sidebar) {
   return next;
 }
 ready.catch(() => {});
-async function broadcast(state) {
-  const message = { type: 'state.changed', state: scanningState(state) };
-  const tabs = await chrome.tabs.query({});
-  await Promise.allSettled(tabs.map(tab => chrome.tabs.sendMessage(tab.id, message)));
-  await chrome.runtime.sendMessage({ type: 'ui.changed' }).catch(() => {});
+// Read inside the refresh queue so slower mutations cannot broadcast older snapshots.
+let refreshQueue = Promise.resolve();
+function broadcast() {
+  const next = refreshQueue.catch(() => {}).then(async () => {
+    const message = { type: 'state.changed', state: scanningState(await store.read()) };
+    const tabs = await chrome.tabs.query({});
+    const results = await Promise.allSettled(tabs.map(tab => chrome.tabs.sendMessage(tab.id, message)));
+    await chrome.runtime.sendMessage({ type: 'ui.changed' }).catch(() => {});
+    return results.some(r => r.status === 'fulfilled' && r.value?.ok === false);
+  });
+  refreshQueue = next;
+  return next;
 }
+ready.then(() => broadcast()).catch(console.error);
+chrome.runtime.onInstalled.addListener(() => {
+  ready.then(async () => {
+    const tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] });
+    await Promise.allSettled(tabs.map(async tab => {
+      const target = { tabId: tab.id };
+      await chrome.scripting.removeCSS({ target, files: ['content/highlights.css'] });
+      await chrome.scripting.insertCSS({ target, files: ['content/highlights.css'] });
+      await chrome.scripting.executeScript({ target, files: ['content/index.js'] });
+    }));
+    await broadcast();
+  }).catch(console.error);
+});
 async function handle(message, sender) {
   await ready;
   if (message.type === 'scan.get') return scanningState(await store.read());
   const trusted = sender.id === chrome.runtime.id && sender.url?.startsWith(chrome.runtime.getURL(''));
   if (!trusted) throw new Error('This action is only available in Spot a Dog.');
+  if (message.type === 'profiles.export') return exportProfiles((await store.read()).profiles, message.scope, message.id);
+  if (message.type === 'profiles.import') {
+    const imported = parseImport(message.text, message.scope);
+    if (!imported.length) return { count: 0, warning: '' };
+    try { await store.update(s => ({ ...s, profiles: mergeProfiles(s.profiles, imported) })); }
+    catch (error) {
+      if (error.message.includes('50 profiles')) throw error;
+      throw new Error('Profiles could not be saved. Existing profiles are unchanged.');
+    }
+    let failed = false;
+    try { failed = await broadcast(); } catch { failed = true; }
+    return { count: imported.length, warning: failed ? 'Profiles saved, but a page could not refresh. Reload affected webpages.' : '' };
+  }
   if (message.type === 'state.get') return { ...await store.read(), hasApiKey: Boolean(await store.getKey()) };
   if (message.type === 'display.set') {
     if (typeof message.sidebar !== 'boolean') throw new Error('Invalid sidebar preference.');
-    const state = await setDisplay(message.sidebar);
-    await broadcast(state);
+    await setDisplay(message.sidebar);
+    await broadcast();
     return true;
   }
   if (message.type === 'settings.save') {
     const model = message.model?.trim();
     if (!model || !/^[a-zA-Z0-9._:-]{1,100}$/.test(model)) throw new Error('Enter a valid model ID.');
     if (message.apiKey !== undefined) await store.setKey(message.apiKey.trim());
-    const state = await store.update(s => ({ ...s, preferences: { ...s.preferences, model } }));
-    await broadcast(state);
+    await store.update(s => ({ ...s, preferences: { ...s.preferences, model } }));
+    await broadcast();
     return true;
   }
   if (message.type === 'ai.suggest') return suggestKeywords({ apiKey: await store.getKey(), seeds: message.seeds, model: (await store.read()).preferences.model });
-  const state = await store.update(s => {
+  await store.update(s => {
     switch (message.type) {
       case 'global.set':
         if (typeof message.enabled !== 'boolean') throw new Error('Invalid enabled state.');
@@ -84,7 +118,7 @@ async function handle(message, sender) {
       default: throw new Error('Unknown Spot a Dog action.');
     }
   });
-  await broadcast(state);
+  await broadcast();
   return true;
 }
 chrome.runtime.onMessage.addListener((message, sender, respond) => {

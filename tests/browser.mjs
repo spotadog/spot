@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, mkdir } from 'node:fs/promises';
+import { mkdtemp, rm, mkdir, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { createServer } from 'node:http';
@@ -245,12 +245,100 @@ try {
   await restoredOptions.getByRole('button', { name: 'Remove API key' }).click();
   await restoredOptions.getByText('API key removed.', { exact: true }).waitFor();
   assert.equal((await restored.evaluate(async () => (await chrome.runtime.sendMessage({ type: 'state.get' })).data)).hasApiKey, false);
+  // Real downloads/uploads and scanning refresh share the production worker/storage path.
   restored.on('dialog', dialog => dialog.accept());
+  const backupPromise = restored.waitForEvent('download');
+  await restored.getByRole('button', { name: 'Download all profiles', exact: true }).click();
+  const backup = await backupPromise;
+  const allText = await readFile(await backup.path(), 'utf8');
+  const onePromise = restored.waitForEvent('download');
+  await restored.getByRole('button', { name: 'Download profile', exact: true }).click();
+  const oneText = await readFile(await (await onePromise).path(), 'utf8');
+  const one = JSON.parse(oneText);
+  assert.deepEqual(one.profiles, JSON.parse(allText).profiles);
+  const importPage = await context.newPage();
+  await importPage.goto(`http://127.0.0.1:${server.address().port}`);
+  await waitFor(importPage, () => CSS.highlights.get('spotadog-matches')?.size === 2);
+  const upload = async (scope, text, name = 'profiles.json') => {
+    const chooser = restored.waitForEvent('filechooser');
+    await restored.getByRole('button', { name: scope === 'single' ? 'Import one profile' : 'Import all profiles', exact: true }).click();
+    await (await chooser).setFiles({ name, mimeType: 'application/json', buffer: Buffer.from(text) });
+  };
+  one.profiles[0].positiveKeywords = ['inference'];
+  one.profiles[0].negativeKeywords = ['data center'];
+  await upload('single', JSON.stringify(one));
+  await restored.getByText('Imported 1 profile(s). Highlights refreshed.', { exact: true }).waitFor();
+  await waitFor(importPage, () => [...CSS.highlights.get('spotadog-matches')].map(r => r.toString()).join() === 'inference');
+  assert.deepEqual(await importPage.evaluate(() => [...CSS.highlights.get('spotadog-negative')].map(r => r.toString())), ['data center']);
+  await upload('all', oneText);
+  await restored.locator('#status').filter({ hasText: 'matching single-profile' }).waitFor();
+  await upload('single', '{}', 'bad.txt');
+  await restored.locator('#status').filter({ hasText: 'Choose a .json' }).waitFor();
+  await upload('single', '{');
+  await restored.locator('#status').filter({ hasText: 'not valid JSON' }).waitFor();
+  assert.deepEqual(await importPage.evaluate(() => [...CSS.highlights.get('spotadog-matches')].map(r => r.toString())), ['inference']);
+  const activeWorker = context.serviceWorkers()[0];
+  await activeWorker.evaluate(() => { globalThis.originalSet = chrome.storage.local.set; chrome.storage.local.set = async () => { throw Error('simulated failure'); }; });
+  await upload('all', allText);
+  await restored.locator('#status').filter({ hasText: 'could not be saved' }).waitFor();
+  assert.deepEqual(await importPage.evaluate(() => [...CSS.highlights.get('spotadog-matches')].map(r => r.toString())), ['inference']);
+  await activeWorker.evaluate(() => { chrome.storage.local.set = globalThis.originalSet; });
+  await upload('all', allText);
+  await restored.getByText('Imported 1 profile(s). Highlights refreshed.', { exact: true }).waitFor();
+  await waitFor(importPage, () => CSS.highlights.get('spotadog-matches')?.size === 2);
+  // A renderer failure reports saved state honestly and clears stale highlights.
+  const failPainting = fail => activeWorker.evaluate(async fail => {
+    const [tab] = await chrome.tabs.query({ url: 'http://127.0.0.1/*' });
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, args: [fail], func: fail => {
+      if (fail) { globalThis.savedHighlight = Highlight; globalThis.Highlight = class { constructor() { throw Error('simulated paint failure'); } }; }
+      else globalThis.Highlight = globalThis.savedHighlight;
+    } });
+  }, fail);
+  await failPainting(true);
+  await upload('single', JSON.stringify(one));
+  await restored.locator('#status').filter({ hasText: 'Profiles saved, but a page could not refresh' }).waitFor();
+  assert.equal(await importPage.evaluate(() => CSS.highlights.has('spotadog-matches') || CSS.highlights.has('spotadog-negative')), false);
+  assert.deepEqual((await restored.evaluate(async () => (await chrome.runtime.sendMessage({ type: 'state.get' })).data)).profiles, one.profiles);
+  await failPainting(false);
+  await upload('all', allText);
+  await restored.getByText('Imported 1 profile(s). Highlights refreshed.', { exact: true }).waitFor();
+  await waitFor(importPage, () => CSS.highlights.get('spotadog-matches')?.size === 2);
+  // Reinitialize while reading current storage, twice; old ranges must never survive.
+  await activeWorker.evaluate(async one => {
+    const saved = (await chrome.storage.local.get('spotadog.state'))['spotadog.state'];
+    await chrome.storage.local.set({ 'spotadog.state': { ...saved, profiles: one.profiles } });
+    const [tab] = await chrome.tabs.query({ url: 'http://127.0.0.1/*' });
+    for (let i = 0; i < 2; i++) await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content/index.js'] });
+  }, one);
+  await waitFor(importPage, () => [...CSS.highlights.get('spotadog-matches')].map(r => r.toString()).join() === 'inference');
+  await upload('all', allText);
+  await restored.getByText('Imported 1 profile(s). Highlights refreshed.', { exact: true }).waitFor();
+  await waitFor(importPage, () => CSS.highlights.get('spotadog-matches')?.size === 2);
+  await restored.screenshot({ path: 'test-results/profile-transfer.png', fullPage: true });
   await restored.getByRole('button', { name: 'Delete', exact: true }).click();
   await restored.getByText('Profile deleted.', { exact: true }).waitFor();
   assert.equal((await restored.evaluate(async () => (await chrome.runtime.sendMessage({ type: 'state.get' })).data)).profiles.length, 0);
+  // Match the README setup: command-line loading alone does not enable Developer mode.
+  const extensionsPage = await context.newPage();
+  await extensionsPage.goto('chrome://extensions');
+  await extensionsPage.evaluate(() => chrome.developerPrivate.updateProfileConfiguration({ inDeveloperMode: true }));
+  // Actual unpacked extension reload invokes onInstalled and refreshes an already-open page.
+  for (const term of ['inference', 'GPU']) {
+    const current = context.serviceWorkers()[0];
+    await current.evaluate(async ({ profile, term }) => {
+      const saved = (await chrome.storage.local.get('spotadog.state'))['spotadog.state'];
+      await chrome.storage.local.set({ 'spotadog.state': { ...saved, profiles: [{ ...profile, positiveKeywords: [term], negativeKeywords: [] }] } });
+    }, { profile: one.profiles[0], term });
+    const restarted = context.waitForEvent('serviceworker');
+    await current.evaluate(() => { setTimeout(() => chrome.runtime.reload(), 100); });
+    await restarted;
+    await importPage.waitForFunction(term => {
+      const words = [...(CSS.highlights.get('spotadog-matches') ?? [])].map(r => r.toString());
+      return words.length === (term === 'GPU' ? 2 : 1) && words.every(word => word === term) && !CSS.highlights.has('spotadog-negative');
+    }, term);
+  }
   assert.deepEqual(errors, []);
-  console.log('Browser checks passed: real MV3 loading, profile CRUD, matching/exclusions, dynamic content, toggles, settings, mocked AI review, safe rendering, popup, and persistence across browser restart.');
+  console.log('Browser checks passed: real MV3 loading, profile CRUD, matching/exclusions, dynamic content, toggles, settings, mocked AI review, safe rendering, popup, persistence across browser restart, profile transfers/failures, and repeated extension reloads.');
 } finally {
   await context?.close();
   await new Promise(resolve => server.close(resolve));

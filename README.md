@@ -20,7 +20,7 @@ npm run build
 
 The **Use sidebar** toggle saves a global display preference across tabs and browser sessions. Popup mode is the default for new and existing installations without a saved preference. Chrome controls panel visibility: a closed panel is reopened by a toolbar click, not forced open during navigation or startup. If Chrome declines the initial open gesture, **Show sidebar** retries directly; the preference remains saved.
 
-After rebuilding, click **Reload** on the extension card and refresh any already-open webpages. Keep loading from the same directory to retain the extension identity and storage. No runtime dependencies or remote scripts are used; esbuild bundles local JavaScript, and Playwright is used only for development tests.
+After rebuilding, click **Reload** on the extension card. Accessible webpages refresh their scanners automatically; refresh a page manually if Chrome prevents reinjection. Keep loading from the same directory to retain the extension identity and storage. No runtime dependencies or remote scripts are used; esbuild bundles local JavaScript, and Playwright is used only for development tests.
 
 ## Product documentation
 
@@ -36,6 +36,18 @@ After rebuilding, click **Reload** on the extension card and refresh any already
 - Full profile management and AI review in both popup and side panel; **Use sidebar** persists your preferred display location; separate settings page for optional API configuration.
 - User-reviewed OpenAI suggestions can be added to either positive or negative keyword lists.
 - Local persistence across browser and extension restarts.
+
+## Profile import and export
+
+In the popup or sidebar, choose **Download all profiles** to back up the collection, or **Download profile** on a profile card for one saved profile. Unsaved edits are not exported. Choose **Import all profiles** or **Import one profile**, select a `.json` file, and confirm the import. Success and validation errors appear above the profile list.
+
+Files use UTF-8 JSON: `{ "format": "spotadog.profiles", "version": 1, "scope": "all", "profiles": [...] }`. Individual exports use `"scope": "single"` and exactly one profile. Both preserve IDs, names, positive/negative keywords, enabled states, timestamps and rules (including legacy `negativeScope`). Global pause, display/model preferences, API keys and runtime highlights are excluded.
+
+Imports merge by ID: matching IDs are replaced completely, including their words and metadata; other profiles remain. Distinct IDs may share a name, as in the existing editor. Duplicate IDs within a file are rejected. The confirmation explains replacement behavior. An empty collection exports successfully; importing it is a no-op. Single and collection files must use their matching import action. Maximum file size is 10 MiB, with at most 50 resulting profiles, 200 terms per list and 120 characters per term. Malformed JSON, non-JSON filenames, unsupported versions, missing or unknown fields, invalid rules, timestamps or keywords are rejected before any write. Unsupported data is never silently discarded or normalized during import.
+
+A successful import persists the complete change in one serialized storage write and immediately rebuilds affected scanners and both highlight layers. New terms become active and replaced terms disappear, subject to global/profile enabled switches. Failed validation or persistence leaves active state intact. If a page cannot refresh, the saved import remains available and feedback requests a page reload. Pages without a content script are skipped.
+
+Every worker start rereads persisted profiles and refreshes connected pages. Extension install/update/reload reinjects the scanner into accessible HTTP/HTTPS tabs; reinitialization disposes the previous scanner, timers and listeners before reading current state. Browser/page restart also reads current storage. The `scripting` permission and HTTP/HTTPS host permissions support this reload recovery. Restricted pages remain unsupported. See Chrome’s [runtime reload lifecycle](https://developer.chrome.com/docs/extensions/reference/api/runtime/) and [scripting permissions](https://developer.chrome.com/docs/extensions/reference/api/scripting).
 
 ## Matching decisions and limits
 
@@ -59,7 +71,7 @@ Initial limitations:
 
 The worker restricts local storage to `TRUSTED_CONTEXTS`. Content scripts receive only enabled state and scanning profile fields through validated messages; they cannot read settings or the API key or invoke profile/settings mutations. Extension UI reads only whether a key exists, not its value. The key is persisted locally **without encryption**; this personal bring-your-own-key implementation is intended for a trusted browser profile, not for embedding a developer’s shared secret in a distributed extension.
 
-Permissions are `storage`, `sidePanel`, HTTP/HTTPS content-script access for automatic scanning, and the OpenAI API host for explicit suggestion requests. No webpage text is sent to OpenAI. The extension does not use analytics.
+Permissions are `storage`, `sidePanel`, `scripting`, HTTP/HTTPS host and content-script access for automatic scanning, and the OpenAI API host for explicit suggestion requests. No webpage text is sent to OpenAI. The extension does not use analytics.
 
 ## OpenAI integration
 
@@ -80,6 +92,7 @@ src/
   options/                 API key and model preferences
   ui/                      Shared UI helpers and styles
   profiles/model.js        Profile schema and input validation
+  profiles/transfer.js     Versioned JSON import/export validation and ID merge
   storage/store.js         Versioned persistence and credential isolation
   matching/matcher.js      Pure typed matching and overlap resolution
   content/                 Page lifecycle, visibility filtering, mutation observer
@@ -103,7 +116,7 @@ npx playwright install chromium
 npm run check
 ```
 
-`npm test` also verifies backward-compatible sidebar defaults. Browser checks exercise no-key popup profile editing, actionable missing-key handling, global/per-tab Chrome routing, display rollback on storage failure, and sidebar restoration across browser restart.
+`npm test` also verifies backward-compatible sidebar defaults, JSON transfer fidelity/validation/capacity, and content initialization races and listener disposal. Browser checks cover actual downloads/uploads, immediate term replacement, failure recovery, and repeated full extension reloads with Developer mode enabled. Browser checks exercise no-key popup profile editing, actionable missing-key handling, global/per-tab Chrome routing, display rollback on storage failure, and sidebar restoration across browser restart.
 
 `npm test` runs core model, literal matching, red overlap precedence, approval capacity/deduplication, storage concurrency/persistence and version rejection, and mocked API validation/error tests. `npm run test:browser` loads the actual unpacked MV3 extension in isolated Playwright Chromium, exercises profile CRUD, dynamic highlights and excluded elements, both highlight colors, negative-only profiles, shared enabled controls, settings, safe AI approval/dismissal and storage failures with a mocked network response, content-script access restrictions, popup rendering, and persistence after closing/reopening the browser. Screenshots go to ignored `test-results/`.
 

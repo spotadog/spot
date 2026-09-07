@@ -1,3 +1,4 @@
+import { MAX_IMPORT_BYTES, parseImport } from '../profiles/transfer.js';
 import { request, element, report, action, subscribe, wireGlobal, wirePageStatus } from '../ui/client.js';
 const $ = selector => document.querySelector(selector);
 if (location.pathname.startsWith('/popup/')) document.body.classList.add('popup');
@@ -42,7 +43,9 @@ async function refresh() {
       report('Profile deleted.');
     });
     const actions = element('div', undefined, { className: 'actions' });
-    actions.append(editButton, deleteButton);
+    const downloadButton = element('button', 'Download profile');
+    action(downloadButton, () => download('single', profile.id));
+    actions.append(editButton, downloadButton, deleteButton);
     card.append(row, element('p', `${profile.positiveKeywords.length} positive · ${profile.negativeKeywords.length} negative`, { className: 'hint' }), actions);
     $('#profiles').append(card);
   }
@@ -130,3 +133,37 @@ subscribe(refresh);
 refresh().catch(report);
 
 wirePageStatus();
+
+async function download(scope, id) {
+  const text = await request('profiles.export', { scope, id });
+  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+  const link = element('a', undefined, { href: url, download: scope === 'all' ? 'spotadog-profiles.json' : 'spotadog-profile.json' });
+  document.body.append(link);
+  try { link.click(); report('Profile download started.'); }
+  finally { link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
+}
+let importScope = 'all';
+action($('#export-all'), () => download('all'));
+for (const scope of ['all', 'single']) action($(`#import-${scope}`), () => {
+  importScope = scope;
+  $('#import-file').value = '';
+  $('#import-file').click();
+});
+$('#import-file').addEventListener('change', async () => {
+  const file = $('#import-file').files[0];
+  const scope = importScope;
+  if (!file) return;
+  try {
+    if (!/\.json$/i.test(file.name)) throw new Error('Choose a .json profile export.');
+    if (file.size > MAX_IMPORT_BYTES) throw new Error('Choose a JSON file no larger than 10 MiB.');
+    const text = await file.text();
+    const profiles = parseImport(text, scope);
+    if (!profiles.length) { report('No profiles to import. Existing profiles are unchanged.'); return; }
+    if (!confirm(`Import ${profiles.length} profile(s)? Matching IDs will be replaced, including their words. Other profiles remain. Unsaved edits and suggestion reviews will close.`)) return;
+    const result = await request('profiles.import', { scope, text });
+    $('#editor').hidden = true;
+    clearSuggestions();
+    await refresh();
+    report(result.warning || `Imported ${result.count} profile(s). Highlights refreshed.`);
+  } catch (error) { report(error); }
+});
