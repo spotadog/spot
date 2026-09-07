@@ -13,6 +13,13 @@ export function normalizeKeywords(value) {
     return [clean];
   });
 }
+export function mergeKeywords(existing, candidates) {
+  const merged = new Map(existing.map(term => [term.toLowerCase(), term]));
+  for (const term of normalizeKeywords(candidates)) {
+    if (!merged.has(term.toLowerCase())) merged.set(term.toLowerCase(), term);
+  }
+  return normalizeKeywords([...merged.values()]);
+}
 export function makeProfile(input, existing) {
   const name = typeof input.name === 'string' ? input.name.trim() : '';
   if (!name || name.length > 80) throw new Error('Enter a profile name of 1–80 characters.');
@@ -23,7 +30,7 @@ export function makeProfile(input, existing) {
     negativeKeywords: normalizeKeywords(input.negativeKeywords ?? []),
     enabled: typeof input.enabled === 'boolean' ? input.enabled : (existing?.enabled ?? true),
     createdAt: existing?.createdAt ?? now, updatedAt: now,
-    rules: existing?.rules ?? { negativeScope: 'text-node', wholeWords: true }
+    rules: existing?.rules ?? { wholeWords: true }
   };
 }
 export function initialState() {

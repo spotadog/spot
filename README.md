@@ -16,13 +16,13 @@ npm run build
 3. Pin **Spot a Dog** from Chrome’s extensions menu.
 4. Click its toolbar icon, then **Open side panel**.
 5. Click **New profile**, enter a name and keywords (one word or phrase per line), then **Save profile**.
-6. Visit an HTTP or HTTPS webpage. Matching text appears in yellow with an underline.
+6. Visit an HTTP or HTTPS webpage. Positive matches appear in yellow with an underline; negative matches appear in red.
 
 After rebuilding, click **Reload** on the extension card and refresh any already-open webpages. Keep loading from the same directory to retain the extension identity and storage. No runtime dependencies or remote scripts are used; esbuild bundles local JavaScript, and Playwright is used only for development tests.
 
 ## Product documentation
 
-[Product features](docs/features.md) and [functional requirements](docs/requirements.md) define the target behavior for future implementation. The requirements supersede the initial negative-keyword suppression policy: negative matches must be red and must not suppress separate positive matches. That change and an explicit AI suggestion dismiss/remove action are not yet implemented. The capabilities and matching details below describe the current extension.
+[Product features](docs/features.md) and [functional requirements](docs/requirements.md) define the product behavior. The extension implements independent positive and negative highlights and explicit AI candidate dismissal. See the [implementation log](docs/implementation-log.md) for the dependency map, verification evidence, and remaining manual checks.
 
 ## Capabilities
 
@@ -37,15 +37,15 @@ After rebuilding, click **Reload** on the extension card and refresh any already
 
 ## Matching decisions and limits
 
-Each visible DOM text node is a matching unit. A negative keyword suppresses **all positive matches from its own profile in that same text node**. It does not suppress other profiles. For example, a profile with positive `GPU` and negative `gaming` highlights `GPU inference` but does not highlight `GPU gaming` in one text node. This intentionally simple rule lives in `src/matching/matcher.js`.
+Each visible DOM text node is a matching unit. Positive terms produce yellow underlined highlights; negative terms produce red underlined highlights independently, including in profiles containing only negative terms. For a profile with positive `GPU` and negative `gaming`, `GPU gaming` highlights both terms in their respective colors.
 
-Matching uses literal text, not regular expressions. `GPU` matches `gpu` but not `GPUs`; `data center` can match whitespace or a newline between the words. Overlapping positive ranges are allowed and duplicate ranges are removed. All profiles use the same highlight color.
+Matching uses literal text, not regular expressions. `GPU` matches `gpu` but not `GPUs`; `data center` can match whitespace or a newline between the words. Duplicate matches are deduplicated by kind and interval. Where positive and negative ranges overlap, pure matching logic subtracts the negative intervals from positive ranges: only overlapping characters turn red. Disabling a contributing profile recomputes these ranges. Both highlight layers are cleared when globally paused.
 
 The scanner skips scripts, styles, forms, code/preformatted text, editable areas, hidden content, and non-text media. CSS Custom Highlight ranges paint text without inserting wrappers or rewriting the webpage DOM. “Visible” includes rendered text below the fold, not just text in the viewport.
 
 Initial limitations:
 
-- Phrases and negative context do not cross text-node boundaries (including inline formatting).
+- Phrases do not cross text-node boundaries (including inline formatting).
 - Shadow DOM, iframes, PDFs, canvas text, browser-internal pages, and Chrome Web Store pages are not scanned. File URLs are not enabled.
 - Mutation events are coalesced to at most one full scan per 150 ms. Very large or continuously updating pages may need an incremental scanner later.
 - Pure CSS animation/stylesheet changes without an observed DOM change may require a resize, page refresh, or global off/on to refresh highlights.
@@ -63,7 +63,7 @@ Permissions are `storage`, `sidePanel`, HTTP/HTTPS content-script access for aut
 
 Open **Settings** from the popup or side panel. Save your own API key and a Responses-compatible model ID (default `gpt-4o-mini`). Leave the key field blank to retain it; use **Remove API key** to delete it. Model access and API billing depend on your OpenAI account; a ChatGPT subscription does not supply API credit.
 
-In the side panel, select a profile, enter 1–20 seed keywords, and click **Get suggestions**. Only those seeds are sent to `https://api.openai.com/v1/responses`, on your explicit request. The dedicated `src/services/openai.js` service requests a strict JSON schema with `store: false` and a 25-second timeout. It handles authentication/quota/network errors, refusals, malformed output, and incomplete responses. Suggestions are validated, bounded, deduplicated, rendered as text, and never added automatically. Select the suggestions and target list, then click **Add selected**.
+In the side panel, select a profile, enter 1–20 seed keywords, and click **Get suggestions**. Only those seeds are sent to `https://api.openai.com/v1/responses`, on your explicit request. The dedicated `src/services/openai.js` service requests a strict JSON schema with `store: false` and a 25-second timeout. It handles authentication/quota/network errors, refusals, malformed output, and incomplete responses. Suggestions are validated, bounded, deduplicated, rendered as text, and never added automatically. Select the suggestions and target list, then click **Add selected**. Use each candidate’s **Dismiss** button or **Dismiss all** to discard review candidates without changing saved keywords. Closing the panel also discards unapproved review candidates.
 
 References used for the implementation: [OpenAI structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs), [Chrome side panel API](https://developer.chrome.com/docs/extensions/reference/api/sidePanel), and [Chrome storage access levels](https://developer.chrome.com/docs/extensions/reference/api/storage).
 
@@ -79,7 +79,7 @@ src/
   ui/                      Shared UI helpers and styles
   profiles/model.js        Profile schema and input validation
   storage/store.js         Versioned persistence and credential isolation
-  matching/matcher.js      Pure matching and negative-keyword policy
+  matching/matcher.js      Pure typed matching and overlap resolution
   content/                 Page lifecycle, visibility filtering, mutation observer
   highlighting/            Non-destructive CSS highlight rendering
   services/openai.js       OpenAI request/response boundary
@@ -92,7 +92,7 @@ docs/prompt-processing-flow.md
 AGENTS.md                  Project workflow instructions for future coding agents
 ```
 
-The profile `rules` object establishes a future extension point; version 1 supports only the documented text-node suppression and whole-word semantics. Storage rejects unknown schema versions rather than overwriting them. Add explicit migration logic in the storage adapter when the schema changes.
+The profile `rules` object establishes a future extension point; version 1 uses the documented text-node matching and whole-word semantics. Existing `negativeScope` fields remain readable but have no effect; new profiles omit that obsolete field. Storage rejects unknown schema versions rather than overwriting them. Add explicit migration logic in the storage adapter when the schema changes.
 
 ## Validation
 
@@ -101,14 +101,14 @@ npx playwright install chromium
 npm run check
 ```
 
-`npm test` runs core model, literal matching, suppression, storage concurrency/persistence, and mocked API validation/error tests. `npm run test:browser` loads the actual unpacked MV3 extension in isolated Playwright Chromium, exercises profile CRUD, dynamic highlights and excluded elements, both enabled controls, settings, safe AI review with a mocked network response, content-script access restrictions, popup rendering, and persistence after closing/reopening the browser. Screenshots go to ignored `test-results/`.
+`npm test` runs core model, literal matching, red overlap precedence, approval capacity/deduplication, storage concurrency/persistence and version rejection, and mocked API validation/error tests. `npm run test:browser` loads the actual unpacked MV3 extension in isolated Playwright Chromium, exercises profile CRUD, dynamic highlights and excluded elements, both highlight colors, negative-only profiles, shared enabled controls, settings, safe AI approval/dismissal and storage failures with a mocked network response, content-script access restrictions, popup rendering, and persistence after closing/reopening the browser. Screenshots go to ignored `test-results/`.
 
 A live OpenAI request requires your own configured key and is not made by the tests. Native Chrome panel docking and toolbar interaction should also be checked manually:
 
 1. Open the popup from the toolbar and click **Open side panel**. Keep the panel open while switching tabs.
 2. Create `AI Infrastructure` with positive `GPU`, `inference`, `data center`, and negative `gaming`.
-3. Confirm highlights on an ordinary page, and their removal/reappearance with profile and global toggles.
-4. Configure a real API key, request suggestions, and verify only selected suggestions are added.
+3. Confirm `GPU gaming` highlights GPU in yellow and gaming in red; check overlapping terms, negative-only profiles, and removal/reappearance with profile and global toggles.
+4. Configure a real API key, request suggestions, dismiss an unwanted candidate, and verify only selected suggestions are added to the chosen list.
 5. Restart Chrome and verify profiles/settings remain. Remove the key if no longer needed.
 
 ## Development prompt history

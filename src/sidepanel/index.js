@@ -1,4 +1,4 @@
-import { request, element, report, action, subscribe, wireGlobal } from '../ui/client.js';
+import { request, element, report, action, subscribe, wireGlobal, wirePageStatus } from '../ui/client.js';
 const $ = selector => document.querySelector(selector);
 let state, editingId = null, suggestionProfile = null;
 function edit(profile) {
@@ -75,11 +75,20 @@ action($('#suggest'), async () => {
   for (const suggestion of suggestions) {
     const label = element('label', undefined, { className: 'inline' });
     label.append(element('input', undefined, { type: 'checkbox', value: suggestion }), element('span', suggestion));
-    $('#suggestions').append(label);
+    const row = element('div', undefined, { className: 'row' });
+    const dismiss = element('button', 'Dismiss', { ariaLabel: `Dismiss ${suggestion}` });
+    action(dismiss, () => {
+      row.remove();
+      if (!$('#suggestions').children.length) clearSuggestions();
+      report('Suggestion dismissed. Saved keywords are unchanged.');
+    });
+    row.append(label, dismiss);
+    $('#suggestions').append(row);
   }
   $('#review').hidden = !suggestions.length;
   report(suggestions.length ? 'Choose the suggestions you want to keep.' : 'No new suggestions returned. Try different seed keywords.');
 });
+action($('#dismiss-suggestions'), () => { clearSuggestions(); report('Suggestions dismissed. Saved keywords are unchanged.'); });
 action($('#add-suggestions'), async () => {
   const keywords = [...$('#suggestions').querySelectorAll('input:checked')].map(input => input.value);
   if (!keywords.length) throw new Error('Select at least one suggestion.');
@@ -91,3 +100,5 @@ action($('#add-suggestions'), async () => {
 wireGlobal(refresh);
 subscribe(refresh);
 refresh().catch(report);
+
+wirePageStatus();

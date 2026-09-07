@@ -1,5 +1,5 @@
 import { createStore, scanningState } from '../storage/store.js';
-import { makeProfile, normalizeKeywords } from '../profiles/model.js';
+import { makeProfile, mergeKeywords } from '../profiles/model.js';
 import { suggestKeywords } from '../services/openai.js';
 const store = createStore();
 const ready = store.init();
@@ -49,7 +49,7 @@ async function handle(message, sender) {
           updated = makeProfile({ ...profile, enabled: message.enabled }, profile);
         } else {
           if (!['positiveKeywords', 'negativeKeywords'].includes(message.target)) throw new Error('Invalid keyword list.');
-          updated = makeProfile({ ...profile, [message.target]: normalizeKeywords([...profile[message.target], ...normalizeKeywords(message.keywords)]) }, profile);
+          updated = makeProfile({ ...profile, [message.target]: mergeKeywords(profile[message.target], message.keywords) }, profile);
         }
         return { ...s, profiles: s.profiles.map(p => p.id === updated.id ? updated : p) };
       }

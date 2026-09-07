@@ -1,17 +1,18 @@
 <!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Spot a Dog — Profiles</title><link rel="stylesheet" href="../ui/styles.css"></head><body><main>
 <header><h1>Spot a Dog</h1><p class="subtitle">Your keywords. A clearer view.</p></header>
 <section><div class="row"><label class="inline"><input type="checkbox" id="global-enabled"> Highlight pages</label><button id="settings">Settings</button></div><p id="global-note" class="hint"></p></section>
+<p id="page-status" class="hint" role="status"></p>
 <p id="status" role="status" aria-live="polite"></p>
 <div class="row"><h2>Keyword profiles</h2><button id="new-profile">New profile</button></div><div id="profiles"></div>
 <section id="editor" hidden><h2 id="editor-title">New profile</h2><form id="profile-form">
 <label for="name">Profile name</label><input id="name" required maxlength="80" placeholder="e.g. AI Infrastructure">
-<label for="positive">Positive keywords</label><textarea id="positive" placeholder="GPU&#10;inference&#10;data center"></textarea><small>One word or phrase per line. These are highlighted.</small>
-<label for="negative">Negative keywords</label><textarea id="negative" placeholder="gaming&#10;graphics settings"></textarea><small>Suppress this profile’s matches in the same text node.</small>
+<label for="positive">Positive keywords</label><textarea id="positive" placeholder="GPU&#10;inference&#10;data center"></textarea><small>One word or phrase per line. These are highlighted in yellow with an underline.</small>
+<label for="negative">Negative keywords</label><textarea id="negative" placeholder="gaming&#10;graphics settings"></textarea><small>Highlighted in red, independently of positive matches. Red takes precedence where terms overlap.</small>
 <label class="inline"><input id="profile-enabled" type="checkbox" checked> Profile enabled</label>
 <div class="actions"><button type="submit" class="primary">Save profile</button><button type="button" id="cancel-edit">Cancel</button></div></form></section>
 <section><h2>Discover related keywords</h2><p class="hint">Send seed keywords to OpenAI, review suggestions, then choose which to add. API usage may incur charges.</p>
 <label for="ai-profile">Add suggestions to</label><select id="ai-profile"></select>
 <label for="seeds">Seed keywords</label><textarea id="seeds" placeholder="artificial intelligence"></textarea>
 <div class="actions"><button id="suggest" class="primary">Get suggestions</button></div>
-<div id="review" hidden><p class="hint">Nothing is added until you select suggestions and click Add selected.</p><div id="suggestions"></div><label for="target">Keyword list</label><select id="target"><option value="positiveKeywords">Positive keywords</option><option value="negativeKeywords">Negative keywords</option></select><div class="actions"><button id="add-suggestions">Add selected</button></div></div></section>
+<div id="review" hidden><p class="hint">Nothing is added until you select suggestions and click Add selected.</p><div id="suggestions"></div><label for="target">Keyword list</label><select id="target"><option value="positiveKeywords">Positive keywords</option><option value="negativeKeywords">Negative keywords</option></select><div class="actions"><button id="add-suggestions">Add selected</button><button id="dismiss-suggestions">Dismiss all</button></div></div></section>
 </main><script type="module" src="index.js"></script></body></html>

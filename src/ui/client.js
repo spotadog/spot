@@ -35,3 +35,23 @@ export function wireGlobal(refresh) {
     finally { toggle.disabled = false; }
   });
 }
+
+// Probe the content script rather than requesting browsing-history permissions.
+export function wirePageStatus() {
+  let revision = 0;
+  const refresh = async () => {
+    const current = ++revision;
+    let supported = false;
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab?.id) supported = (await chrome.tabs.sendMessage(tab.id, { type: 'page.status' }))?.supported === true;
+    } catch { /* Restricted pages and tabs awaiting reload have no content script. */ }
+    if (current !== revision) return;
+    document.querySelector('#page-status').textContent = supported
+      ? 'This page supports highlighting.'
+      : 'Highlighting is unavailable on this page. Use an HTTP/HTTPS webpage; reload it if the extension was just installed or updated. Your scanning switches are unchanged.';
+  };
+  chrome.tabs.onActivated.addListener(refresh);
+  chrome.tabs.onUpdated.addListener(refresh);
+  refresh();
+}

@@ -1,4 +1,4 @@
-import { request, element, report, action, subscribe, wireGlobal } from '../ui/client.js';
+import { request, element, report, action, subscribe, wireGlobal, wirePageStatus } from '../ui/client.js';
 async function refresh() {
   const state = await request('state.get');
   document.querySelector('#global-enabled').checked = state.enabled;
@@ -20,10 +20,13 @@ async function refresh() {
 // Call open directly in the click gesture; awaiting a message first can lose activation.
 action(document.querySelector('#open-panel'), async () => {
   const current = await chrome.windows.getCurrent();
-  await chrome.sidePanel.open({ windowId: current.id });
+  try { await chrome.sidePanel.open({ windowId: current.id }); }
+  catch { throw new Error('Could not open the side panel. Try again from the toolbar or use Chrome’s side panel menu.'); }
   window.close();
 });
 action(document.querySelector('#settings'), () => chrome.runtime.openOptionsPage());
 wireGlobal(refresh);
 subscribe(refresh);
 refresh().catch(report);
+
+wirePageStatus();

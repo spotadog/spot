@@ -12,15 +12,35 @@ function occurrences(text, keyword) {
   }
   return result;
 }
-// A negative suppresses only its own profile, within this same text node.
+// Return independent match kinds. Legacy negativeScope never enables suppression.
 export function findMatches(text, profiles) {
-  const matches = [];
+  const matches = new Map();
   for (const profile of profiles) {
-    if (!profile.enabled || profile.negativeKeywords.some(keyword => occurrences(text, keyword).length)) continue;
-    for (const keyword of profile.positiveKeywords) {
-      for (const hit of occurrences(text, keyword)) matches.push({ ...hit, profileId: profile.id });
+    if (!profile.enabled) continue;
+    for (const [kind, keywords] of [['positive', profile.positiveKeywords], ['negative', profile.negativeKeywords]]) {
+      for (const keyword of keywords) {
+        for (const hit of occurrences(text, keyword)) matches.set(`${kind}:${hit.start}:${hit.end}`, { ...hit, kind });
+      }
     }
   }
-  matches.sort((a, b) => a.start - b.start || b.end - a.end);
-  return matches.filter((hit, index) => !index || hit.start !== matches[index - 1].start || hit.end !== matches[index - 1].end);
+  return [...matches.values()].sort((a, b) => a.start - b.start || b.end - a.end || a.kind.localeCompare(b.kind));
+}
+// Subtract negative intervals from positives before creating DOM ranges. This makes
+// red precedence deterministic even on browsers without Highlight.priority.
+export function resolveHighlights(matches) {
+  const negative = matches.filter(hit => hit.kind === 'negative');
+  return matches.flatMap(hit => {
+    if (hit.kind === 'negative') return [hit];
+    let pieces = [hit];
+    for (const cut of negative) {
+      pieces = pieces.flatMap(piece => {
+        if (cut.end <= piece.start || cut.start >= piece.end) return [piece];
+        const remaining = [];
+        if (cut.start > piece.start) remaining.push({ ...piece, end: cut.start });
+        if (cut.end < piece.end) remaining.push({ ...piece, start: cut.end });
+        return remaining;
+      });
+    }
+    return pieces;
+  });
 }

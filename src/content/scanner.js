@@ -1,4 +1,4 @@
-import { findMatches } from '../matching/matcher.js';
+import { findMatches, resolveHighlights } from '../matching/matcher.js';
 import { Highlighter } from '../highlighting/highlighter.js';
 const SKIP = 'script,style,noscript,textarea,input,select,option,pre,code,kbd,samp,svg,canvas,[hidden],[inert],[aria-hidden="true"],[contenteditable]:not([contenteditable="false"])';
 export class Scanner {
@@ -16,7 +16,7 @@ export class Scanner {
   update(state) {
     this.stop();
     this.state = state;
-    if (!state.enabled || !state.profiles.some(p => p.enabled && p.positiveKeywords.length)) return;
+    if (!state.enabled || !state.profiles.some(p => p.enabled && (p.positiveKeywords.length || p.negativeKeywords.length))) return;
     this.observer.observe(this.doc.documentElement, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class', 'style', 'hidden', 'open', 'aria-hidden', 'contenteditable', 'inert'] });
     this.win.addEventListener('resize', this.schedule);
     this.doc.addEventListener('toggle', this.schedule, true);
@@ -38,11 +38,11 @@ export class Scanner {
       const element = node.parentElement;
       if (!node.textContent.trim() || !element || element.closest(SKIP)) continue;
       if (!element.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
-      for (const match of findMatches(node.textContent, this.state.profiles)) {
+      for (const match of resolveHighlights(findMatches(node.textContent, this.state.profiles))) {
         const range = this.doc.createRange();
         range.setStart(node, match.start);
         range.setEnd(node, match.end);
-        if (range.getClientRects().length) ranges.push(range);
+        if (range.getClientRects().length) ranges.push({ range, kind: match.kind });
       }
     }
     this.highlighter.paint(ranges);

@@ -1,1 +1,2 @@
 ::highlight(spotadog-matches) { background-color: #ffe077; color: #262017; text-decoration: underline; }
+::highlight(spotadog-negative) { background-color: #ef6666; color: #260808; text-decoration: underline; }

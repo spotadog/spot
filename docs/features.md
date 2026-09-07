@@ -26,6 +26,6 @@ To expand a profile, select its destination, enter seeds, and click **Get sugges
 
 ## Availability and limits
 
-Red negative highlights and an explicit suggestion dismiss/remove action are documented requirements awaiting implementation. The current extension instead uses negative terms to suppress positive matches in the same text node. This guide must not be read as confirmation that those new behaviors have shipped.
+Independent red negative highlights, red overlap precedence, individual candidate dismissal, and dismissal of all candidates are implemented. See the [implementation log](implementation-log.md) for automated validation and remaining manual checks.
 
 Scanning covers supported webpage text, including dynamically added content. Browser-internal pages and other excluded content remain outside the current scope; see [matching decisions and limits](../README.md#matching-decisions-and-limits). Profiles and settings persist across browser restarts. The [functional requirements and acceptance checks](requirements.md) define the implementation contract for future changes.

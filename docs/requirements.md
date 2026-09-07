@@ -2,9 +2,9 @@
 
 ## Authority and scope
 
-This document defines required product behavior for future implementation, based on [prompt 003](prompts/003-requirements-and-features.md). The [feature guide](features.md) describes the same behavior for users. “Must” indicates a requirement; examples illustrate it, and explicitly marked future possibilities are optional. The [README](../README.md) describes the current implementation and its limitations, not a claim that every requirement below is shipped.
+This document defines required product behavior, based on [prompt 003](prompts/003-requirements-and-features.md). The [feature guide](features.md) describes the same behavior for users. “Must” indicates a requirement; examples illustrate it, and explicitly marked future possibilities are optional. The [README](../README.md) describes the current implementation and its limitations, not a claim that every requirement below is shipped.
 
-The requirements from [prompt 001](prompts/001-initial-project-setup.md) remain applicable except where explicitly superseded here. In particular, negative keywords must now produce red highlights independently of positive matches. This replaces the initial same-text-node suppression rule. This task changes documentation only.
+The requirements from [prompt 001](prompts/001-initial-project-setup.md) remain applicable except where explicitly superseded here. In particular, negative keywords must now produce red highlights independently of positive matches. This replaces the initial same-text-node suppression rule. Prompt 003 established this contract; prompt 004 implements the changes.
 
 ## R1 — Global extension state
 
@@ -61,7 +61,7 @@ Every matching negative word or phrase from an enabled profile must be highlight
 
 For deterministic rendering, red takes precedence on characters where positive and negative ranges overlap; non-overlapping positive characters retain their positive style. Duplicate matches must not create stacked visual effects. A term present in both lists is allowed and renders red when both are active. This overlap rule is a documented implementation decision, not an additional filtering feature.
 
-Example: with positive `GPU` and negative `gaming`, `GPU gaming` must display `GPU` in the positive color and `gaming` in red. `gaming` alone must still be red. The current code suppresses `GPU` in this example and does not paint `gaming`; future implementation must replace that behavior.
+Example: with positive `GPU` and negative `gaming`, `GPU gaming` must display `GPU` in the positive color and `gaming` in red. `gaming` alone must still be red. The implementation must retain both independent matches in this example.
 
 ## R7 — Independent profile activation
 
@@ -108,17 +108,13 @@ Current scope excludes shadow DOM, iframes, PDFs, canvas text, browser-internal 
 
 Persist profiles, both lists, independent/global states, and preferences across browser and extension restarts through the single versioned storage abstraction. Serialize mutations, preserve unrelated profile updates, and reject unsupported schema versions without overwriting data. Same-profile concurrent edits retain the documented last-save behavior. Report extension/storage errors gracefully.
 
-Keep modules small, focused, and free of unnecessary dependencies. Matching must remain independent of UI and rendering; storage must stay behind its adapter; AI calls must stay behind the dedicated service. Global state, interface presentation, profiles, keyword persistence, scanning, rendering, AI generation, and settings must remain separate responsibilities. Additional profile rules, incremental scanning, broader document coverage, or alternative AI providers are future possibilities, not requirements to implement in this documentation task.
+Keep modules small, focused, and free of unnecessary dependencies. Matching must remain independent of UI and rendering; storage must stay behind its adapter; AI calls must stay behind the dedicated service. Global state, interface presentation, profiles, keyword persistence, scanning, rendering, AI generation, and settings must remain separate responsibilities. Additional profile rules, incremental scanning, broader document coverage, or alternative AI providers are future possibilities, not requirements for this implementation.
 
-## Implementation gaps and future acceptance checks
+## Implementation status and acceptance checks
 
-The README records shipped behavior. The following gaps are identified from the current source; other requirements still need validation when implemented:
+Independent negative matching, red precedence, negative-only scanning, revised panel guidance, and explicit candidate dismissal are implemented in prompt 004. The [implementation log](implementation-log.md) records dependencies, changed components, verification, and remaining limitations.
 
-- Negative terms currently suppress same-profile positive matches. Red negative highlights, independent positive/negative matching, and overlap precedence are pending.
-- The panel’s negative-keyword help text describes suppression and must change with that implementation.
-- AI review supports selection and addition to either list. An explicit dismiss/remove action for unwanted candidates is pending.
-
-Future implementation must run `npm run check`, update tests that currently assert suppression, and complete the README’s applicable manual Chrome checks. Acceptance must cover:
+`npm run check` covers the automated acceptance scenarios below, including real unpacked-extension tests. Native toolbar/panel docking and a live OpenAI request still require the README’s manual Chrome checks; automated panel-page tests do not establish those behaviors.
 
 | Scenario | Expected result | Requirements |
 | --- | --- | --- |
@@ -133,4 +129,4 @@ Future implementation must run `npm run check`, update tests that currently asse
 | Select subset, dismiss others, add separately to each target list | Only approved terms enter the chosen profile/list; duplicates handled | R10–R11 |
 | AI failure, invalid output, deleted target, or storage failure | Clear error; no unintended profile mutation | R8–R11 |
 
-This table is a future verification specification, not a report of tests run for this documentation change.
+This table remains the acceptance contract. See the implementation log for what has been verified automatically and what remains manual.
