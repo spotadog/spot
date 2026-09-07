@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Spot a Dog",
+  "version": "0.1.0",
+  "description": "Spot the words and phrases that matter with your own keyword profiles.",
+  "minimum_chrome_version": "120",
+  "permissions": ["storage", "sidePanel"],
+  "host_permissions": ["https://api.openai.com/*"],
+  "background": {"service_worker": "background/worker.js", "type": "module"},
+  "action": {"default_title": "Spot a Dog", "default_popup": "popup/index.html"},
+  "side_panel": {"default_path": "sidepanel/index.html"},
+  "options_page": "options/index.html",
+  "content_scripts": [{"matches": ["http://*/*", "https://*/*"], "js": ["content/index.js"], "css": ["content/highlights.css"], "run_at": "document_idle"}],
+  "content_security_policy": {"extension_pages": "script-src 'self'; object-src 'self'; connect-src https://api.openai.com"}
+}
