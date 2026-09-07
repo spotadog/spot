@@ -102,7 +102,7 @@ export class Scanner {
         const range = this.doc.createRange();
         range.setStart(node, match.start);
         range.setEnd(node, match.end);
-        if (range.getClientRects().length) ranges.push({ range, kind: match.kind });
+        if (range.getClientRects().length) ranges.push({ range, kind: match.kind, color: match.color });
       }
     }
     if (this.state.tracking) this.recordCounts(units);

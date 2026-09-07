@@ -9,7 +9,7 @@ Spot a Dog helps you quickly scan webpages by highlighting words and phrases rel
 | Sidebar / Side Panel | Enable **Use sidebar** for the same interface beside the webpage. The saved preference controls later toolbar openings across tabs and browser sessions. |
 | Keyword Profiles | Organize topics, subjects, categories, keyword types, or interests into named reusable profiles; create, edit, or delete them; add, activate/deactivate, edit, save and remove each keyword in its own row. |
 | Positive Keywords | Highlight important or desirable words and multi-word phrases in a distinct positive color, initially yellow with an underline. |
-| Negative Keywords | Highlight negative words and phrases in red so they are easy to distinguish, including when no positive terms appear nearby. |
+| Negative Keywords | Highlight negative words and phrases in red by default so they are easy to distinguish, including when no positive terms appear nearby. |
 | Keyword Match Criteria | Select and configure all [17 match types](keyword-match-criteria.md), including word/phrase operations, lengths, structural recognition and advanced regex, for positive or negative highlights. |
 | Live Keyword Counts | Optionally enable **Track keyword occurrences** to see separate unique-in-context and repeated counts beside each saved keyword, updated for the current page. Disabled by default. |
 | Independent Profiles | Switch each profile on or off without changing other profiles. Only enabled profiles scan when Spot a Dog is globally on. |
@@ -30,11 +30,15 @@ Choose a profile from the **Profile** dropdown to view its read-only details. Ty
 
 While editing, use **Add Keyword** to enter one term, **Save keyword** to finish that row, and **Save profile** to apply changes. Each row has an activity checkbox (checked = active, unchecked = inactive), **Edit**, and confirmed **Remove** action. Activity is editable in both create and edit modes and persists only with Save profile; Cancel restores the saved profile. Missing activity on legacy keywords defaults to active. Blank or duplicate terms show an inline error.
 
-For example, a profile named **AI Infrastructure** could contain positive terms `GPU`, `inference`, and `data center`, and negative terms `gaming` and `graphics settings`. The required behavior highlights positives in yellow and negatives in red. If the same characters match both kinds, red takes precedence. You can enable this profile alongside other interests or disable it independently.
+For example, a profile named **AI Infrastructure** could contain positive terms `GPU`, `inference`, and `data center`, and negative terms `gaming` and `graphics settings`. Default colors are yellow for positives and red for negatives. Each keyword can use one of six presets or any custom color. If the same characters match both kinds, the negative keyword takes precedence regardless of color. You can enable this profile alongside other interests or disable it independently.
 
 Open **Settings** to save your own API key and model configuration. A blank key field retains the saved key; **Remove API key** deletes it. The key is stored locally, unencrypted, for use in a trusted browser profile. Only explicitly entered discovery seeds are sent as user content to OpenAI or Anthropic; scanned webpage text is never attached. No API key is needed to create profiles or highlight pages. See [credential requirements](requirements.md#r8--ai-configuration-and-credentials) for handling and privacy rules.
 
 To expand a profile, select its destination, enter seeds, and click **Get suggestions**. Review the results, select terms you want, choose the positive or negative list, and click **Add selected**. Generation alone never changes your profile. Adding terms while the profile or global switch is off stores them for later use without turning scanning on.
+
+## Keyword highlight colors
+
+Add or edit a keyword to choose Yellow, Red, Green, Blue, Purple, Orange, or a custom color. The selected preset has an outline; the selected name and hex value are shown beside the custom picker. Save keyword updates the draft, and Save profile persists and applies the color. Colors survive reload, reopening, and profile backups. Legacy keywords keep their group defaults. Custom highlights choose black or white foreground text for contrast.
 
 ## Availability and limits
 

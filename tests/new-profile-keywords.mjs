@@ -18,8 +18,8 @@ export async function checkNewProfileKeywords(page, id, worker) {
       async function add(term) {
         await list.getByRole('button', { name: 'Add Keyword', exact: true }).click();
         const row = list.locator('.keyword-row').last();
-        await row.getByRole('textbox').fill(term);
-        await row.getByRole('textbox').press('Enter');
+        await row.getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).fill(term);
+        await row.getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).press('Enter');
         return row;
       }
       const expected = [];
@@ -27,7 +27,7 @@ export async function checkNewProfileKeywords(page, id, worker) {
         await add(term);
         expected.push(term);
         assert.deepEqual(await visible(), expected);
-        assert.equal(await list.getByRole('textbox').count(), 0);
+        assert.equal(await list.getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).count(), 0);
       }
       for (const [term, error] of [['  react  ', 'already exists'], ['   ', 'Enter a keyword'], ['x'.repeat(121), 'under 121 characters']]) {
         const row = await add(term);

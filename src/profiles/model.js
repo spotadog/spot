@@ -1,3 +1,4 @@
+import { validateColor } from '../highlighting/colors.js';
 import { keywordText, keywordCriterion, keywordKey } from './keyword.js';
 import { validateCriteria } from '../matching/criteria.js';
 export const DEFAULT_PREFERENCES = { model: 'gpt-4o-mini', sidebar: false, tracking: false };
@@ -7,11 +8,12 @@ export function normalizeKeywords(value) {
   const seen = new Set();
   return items.flatMap(item => {
     const text = keywordText(item);
-    if (typeof text !== 'string' || (typeof item === 'object' && (Array.isArray(item) || Object.keys(item).some(k => !['text', 'matchingCriteria', 'active'].includes(k))))) throw new Error('Keywords must be text or keyword records.');
+    if (typeof text !== 'string' || (typeof item === 'object' && (Array.isArray(item) || Object.keys(item).some(k => !['text', 'matchingCriteria', 'active', 'color'].includes(k))))) throw new Error('Keywords must be text or keyword records.');
     if (typeof item === 'object' && Object.hasOwn(item, 'active') && typeof item.active !== 'boolean') throw new Error('Keyword active state must be a boolean.');
     const clean = item?.matchingCriteria?.type === 'regex' ? text : text.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
     if (clean.length > 120) throw new Error('Keep each keyword or phrase under 121 characters.');
     const record = typeof item === 'string' ? clean : { ...item, text: clean };
+    if (typeof record === 'object' && Object.hasOwn(record, 'color')) record.color = validateColor(record.color);
     keywordCriterion(record);
     const key = keywordKey(record);
     if (!clean || seen.has(key)) return [];

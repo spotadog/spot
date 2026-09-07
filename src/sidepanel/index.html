@@ -20,8 +20,8 @@
 <button type="button" id="positive-tab" role="tab" aria-selected="true" aria-controls="positive-panel" tabindex="0">Positive Words</button>
 <button type="button" id="negative-tab" role="tab" aria-selected="false" aria-controls="negative-panel" tabindex="-1">Negative Words</button>
 </div>
-<div id="positive-panel" class="keyword-list" role="tabpanel" aria-labelledby="positive-tab" tabindex="0"><small>Highlighted in yellow with an underline.</small><div id="positive"></div></div>
-<div id="negative-panel" class="keyword-list" role="tabpanel" aria-labelledby="negative-tab" tabindex="0" hidden><small>Highlighted in red. Red takes precedence where terms overlap.</small><div id="negative"></div></div>
+<div id="positive-panel" class="keyword-list" role="tabpanel" aria-labelledby="positive-tab" tabindex="0"><small>Yellow by default. Edit a keyword to choose its highlight color.</small><div id="positive"></div></div>
+<div id="negative-panel" class="keyword-list" role="tabpanel" aria-labelledby="negative-tab" tabindex="0" hidden><small>Red by default. Negative words take precedence where terms overlap, regardless of color.</small><div id="negative"></div></div>
 <label class="inline"><input id="profile-enabled" type="checkbox" checked> Profile enabled</label>
 <div id="save-actions" class="actions"><button type="submit" class="primary">Save profile</button><button type="button" id="cancel-edit">Cancel</button></div></form></section>
 <section><h2>Discover related keywords</h2><p id="ai-model" class="hint"></p><p class="hint">Send seed keywords to your selected AI provider, review suggestions, then choose which to add. API usage may incur charges.</p>

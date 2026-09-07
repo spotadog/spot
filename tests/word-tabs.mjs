@@ -53,12 +53,12 @@ export async function checkWordTabs(page, id) {
     await page.locator('#edit-profile').click();
     const row = page.locator('#negative .keyword-row').first();
     await row.getByRole('button', { name: 'Edit', exact: true }).click();
-    await row.getByRole('textbox').fill('unsaved negative');
+    await row.getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).fill('unsaved negative');
     await positive.click();
     await page.getByRole('button', { name: 'Save profile', exact: true }).click();
     await selected('negative');
-    assert.equal(await row.getByRole('textbox').inputValue(), 'unsaved negative');
-    assert.equal(await row.getByRole('textbox').evaluate(el => el === document.activeElement), true);
+    assert.equal(await row.getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).inputValue(), 'unsaved negative');
+    assert.equal(await row.getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).evaluate(el => el === document.activeElement), true);
     await row.getByRole('button', { name: 'Cancel', exact: true }).click();
     await positive.click();
     await page.getByRole('button', { name: 'Save profile', exact: true }).click();

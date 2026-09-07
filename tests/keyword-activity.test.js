@@ -8,7 +8,8 @@ import { createStore, scanningState } from '../src/storage/store.js';
 
 // Minimal DOM fixture for the shared editor; native input behavior is covered by the MV3 suite.
 class Node {
-  constructor(tag) { this.tag = tag; this.children = []; this.listeners = {}; this.dataset = {}; this.value = ''; this.checked = false; this.classList = { toggle() {} }; }
+  constructor(tag) { this.tag = tag; this.style = {}; this.attributes = {}; this.children = []; this.listeners = {}; this.dataset = {}; this.value = ''; this.checked = false; this.classList = { toggle() {} }; }
+  setAttribute(name, value) { this.attributes[name] = value; }
   append(...nodes) { this.children.push(...nodes); }
   replaceChildren(...nodes) { this.children = nodes; }
   addEventListener(type, fn) { this.listeners[type] = fn; }
@@ -88,4 +89,44 @@ test('activity persists through storage and backups, controls both match kinds, 
   for (const key of ['id', 'name', 'enabled', 'createdAt', 'rules', 'negativeKeywords']) assert.deepEqual(edited[key], p[key]);
   assert.deepEqual(mergeKeywords(p.positiveKeywords, ['cat', 'new']), [...p.positiveKeywords, 'new']);
   for (const active of [null, 0, 'false']) assert.throws(() => validateKeyword({ text: 'dog', active }), /boolean/);
+});
+
+const descendants = node => [node, ...node.children.flatMap(descendants)];
+const colorButton = (row, name) => descendants(row).find(n => n.ariaLabel === `${name} highlight`);
+const customColor = row => descendants(row).find(n => n.type === 'color');
+const setText = (row, value) => { row.children.find(n => n.type === 'text').value = value; };
+test('adding keywords selects each of six presets with a clear exclusive selected state', async () => {
+  const { HIGHLIGHT_COLORS } = await import('../src/highlighting/colors.js');
+  assert.equal(HIGHLIGHT_COLORS.length, 6);
+  const f = fixture([], true);
+  for (const [i, color] of HIGHLIGHT_COLORS.entries()) {
+    f.container.children[2].click();
+    const row = f.row(i);
+    setText(row, color.name);
+    colorButton(row, color.name).click();
+    assert.equal(colorButton(row, color.name).attributes['aria-pressed'], 'true');
+    assert.equal(descendants(row).filter(n => n.attributes['aria-pressed'] === 'true').length, 1);
+    assert.equal(customColor(row).value, color.value);
+    button(row, 'Save keyword').click();
+    assert.equal(f.editor.read()[i].color, color.value);
+  }
+});
+test('custom color creation, edit, cancel and text/activity edits preserve the chosen color', () => {
+  const f = fixture([], true);
+  f.container.children[2].click();
+  const row = f.row(0);
+  setText(row, 'dog');
+  customColor(row).value = '#123ABC'; customColor(row).fire('input');
+  assert.equal(descendants(row).filter(n => n.attributes['aria-pressed'] === 'true').length, 0);
+  button(row, 'Save keyword').click();
+  assert.deepEqual(f.editor.read(), [{ text: 'dog', color: '#123abc' }]);
+  button(row, 'Edit').click();
+  colorButton(row, 'Green').click(); button(row, 'Cancel').click();
+  assert.equal(f.editor.read()[0].color, '#123abc');
+  button(row, 'Edit').click();
+  assert.equal(customColor(row).value, '#123abc');
+  colorButton(row, 'Blue').click(); button(row, 'Save keyword').click();
+  assert.equal(f.editor.read()[0].color, '#8fc9ff');
+  button(row, 'Edit').click(); setText(row, 'cat'); toggle(row, false); button(row, 'Save keyword').click();
+  assert.deepEqual(f.editor.read(), [{ text: 'cat', color: '#8fc9ff', active: false }]);
 });

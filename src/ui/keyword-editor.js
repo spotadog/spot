@@ -1,3 +1,5 @@
+import { colorEditor } from './color-editor.js';
+import { keywordColor } from '../highlighting/colors.js';
 import { keywordKey, keywordText, keywordActive, withKeywordActivity } from '../profiles/keyword.js';
 import { MATCH_TYPES } from '../matching/criteria.js';
 import { criteriaEditor } from './criteria-editor.js';
@@ -28,6 +30,10 @@ export function keywordEditor(container, title, onChange = () => {}, reveal = ()
     const criteriaContainer = element('div');
     const criteria = criteriaEditor(criteriaContainer, onChange);
     criteria.load(value?.matchingCriteria);
+    const colorContainer = element('div');
+    const colors = colorEditor(colorContainer, title.toLowerCase().startsWith('negative') ? 'negative' : 'positive', onChange);
+    colors.load(value);
+    const swatch = element('small', '', { className: 'keyword-color' });
     const error = element('p', '', { className: 'keyword-error', role: 'alert' });
     const edit = element('button', 'Edit', { type: 'button' });
     const save = element('button', 'Save keyword', { type: 'button' });
@@ -35,14 +41,18 @@ export function keywordEditor(container, title, onChange = () => {}, reveal = ()
     const remove = element('button', 'Remove', { type: 'button', className: 'danger' });
     const actions = element('div', undefined, { className: 'actions' });
     actions.append(edit, save, cancel, remove);
-    row.append(label, count, input, criteriaContainer, error, actions);
+    row.append(label, swatch, count, input, criteriaContainer, colorContainer, error, actions);
     const record = { value, count, active: keywordActive(value), row, editing: value === null, render };
     rows.push(record);
     function render() {
       text.textContent = keywordText(record.value) ?? 'New keyword';
       const criterion = record.value?.matchingCriteria;
       if (criterion) text.textContent += ` — ${MATCH_TYPES.find(d => d.type === criterion.type)?.label ?? criterion.type}${criterion.value !== undefined ? ` (${criterion.value})` : criterion.min !== undefined ? ` (${criterion.min}–${criterion.max})` : ''}`;
-      criteriaContainer.hidden = !record.editing;
+      criteriaContainer.hidden = colorContainer.hidden = !record.editing;
+      const color = keywordColor(record.value, title.toLowerCase().startsWith('negative') ? 'negative' : 'positive');
+      swatch.textContent = color;
+      swatch.style.borderLeftColor = color;
+      swatch.title = `Highlight color: ${color}`;
       selected.checked = record.active;
       selected.disabled = !editable;
       selected.ariaLabel = `${keywordText(record.value) ?? 'New keyword'} active`;
@@ -70,10 +80,12 @@ export function keywordEditor(container, title, onChange = () => {}, reveal = ()
       onChange();
     });
     input.addEventListener('input', onChange);
-    edit.addEventListener('click', () => { record.editing = true; input.value = keywordText(record.value); criteria.load(record.value?.matchingCriteria); render(); input.focus(); row.scrollIntoView({ block: 'nearest' }); });
+    edit.addEventListener('click', () => { record.editing = true; input.value = keywordText(record.value); criteria.load(record.value?.matchingCriteria); colors.load(record.value); render(); input.focus(); row.scrollIntoView({ block: 'nearest' }); });
     save.addEventListener('click', () => {
       try {
-        record.value = validateKeyword(withKeywordActivity(criteria.read() ? { text: input.value, matchingCriteria: criteria.read() } : input.value, record.active), rows.filter(item => item !== record && item.value !== null).map(item => item.value));
+        const criterion = criteria.read(), color = colors.read();
+        const value = criterion || color !== undefined ? { text: input.value, ...(criterion ? { matchingCriteria: criterion } : {}), ...(color !== undefined ? { color } : {}) } : input.value;
+        record.value = validateKeyword(withKeywordActivity(value, record.active), rows.filter(item => item !== record && item.value !== null).map(item => item.value));
         record.editing = false;
         render();
         onChange();

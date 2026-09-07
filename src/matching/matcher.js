@@ -1,3 +1,4 @@
+import { keywordColor } from '../highlighting/colors.js';
 import { keywordText, keywordCriterion, keywordActive } from '../profiles/keyword.js';
 import { validateCriterion } from './criteria.js';
 const word = /[\p{L}\p{N}_]/u;
@@ -112,7 +113,7 @@ export function findMatches(text, profiles) {
       for (const keyword of keywords) {
         if (!keywordActive(keyword)) continue;
         const hits = keywordOccurrences(text, keyword, kind);
-        for (const hit of hits) matches.set(`${kind}:${hit.start}:${hit.end}`, { ...hit, kind });
+        for (const hit of hits) matches.set(`${kind}:${hit.start}:${hit.end}`, { ...hit, kind, ...(keyword?.color !== undefined ? { color: keywordColor(keyword, kind) } : {}) });
       }
     }
   }

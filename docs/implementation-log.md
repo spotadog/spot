@@ -210,3 +210,11 @@ Prompt 002 is the repository's only publication workflow: current `main` branch,
 - Validation: npm run check passed 91 unit tests, build and automated MV3 browser checks, including actual automatic navigation, speed, paused detail/Back, tab switching, closed-tab cleanup and fresh browser cleanup. Exact prompt preservation and git diff --check passed. No manual/live-site testing. See prompt 024 for the intermediate test-click timing investigation.
 - Limits/next steps: document scrolling and recognized same-origin pagination; unusual controls/nested containers, unexpected redirects and slow loaders may require manual navigation or Resume. User to reload dist/ and verify representative live sites.
 - Publication: existing main, existing SSH identity, no new branch; origin fetched without divergence. Invalid GitHub CLI authentication requires the documented repository/commit review-note fallback.
+
+## Per-keyword highlight colors — prompt 025
+
+- Request: six preset colors and a custom picker for adding/editing keywords, persisted with backward compatibility. Complete prompt saved before implementation.
+- Changes: shared accessible color controls, optional validated keyword color, safe legacy defaults, and per-color highlight groups with contrast-aware text and cleanup. Existing storage abstraction, backup version, activity, criteria, counts and explicit draft saving remain.
+- Validation: npm run check passed 98 unit tests, build and the full automated MV3 suite, including popup/sidebar color changes, rendered ranges and browser-restart persistence. No manual/live-site browser testing. See prompt 025 for coverage and resolved test-fixture issues.
+- Publication: current main, existing SSH identity, no new branch; fetched origin without divergence. Invalid GitHub CLI authentication requires the documented repository/commit review-note fallback.
+- Next step: user to reload dist/ and check colors in Chrome. Older versions cannot import backups with color fields; Save profile applies color drafts.

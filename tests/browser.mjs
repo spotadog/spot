@@ -1,3 +1,4 @@
+import { checkKeywordColors } from './keyword-colors.mjs';
 import { checkAutoScroll } from './auto-scroll.mjs';
 import { checkPopupLayout } from './popup-layout.mjs';
 import { checkNewProfileKeywords } from './new-profile-keywords.mjs';
@@ -24,7 +25,7 @@ async function addKeyword(page, kind, value) {
   const list = page.locator(`#${kind}`);
   await list.getByRole('button', { name: 'Add Keyword', exact: true }).click();
   const row = list.locator('.keyword-row').last();
-  await row.getByRole('textbox').fill(value);
+  await row.getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).fill(value);
   await row.getByRole('button', { name: 'Save keyword', exact: true }).click();
 }
 async function clearKeywords(page, kind) {
@@ -586,12 +587,12 @@ try {
     assert.equal(await second.getByRole('checkbox').isChecked(), true);
     await first.getByRole('button', { name: 'Edit', exact: true }).click();
     for (const [value, message] of [[' ', 'Enter a keyword or phrase.'], ['HOT DOG', 'already exists'], ['x'.repeat(121), 'under 121']]) {
-      await first.getByRole('textbox').fill(value);
+      await first.getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).fill(value);
       await first.getByRole('button', { name: 'Save keyword' }).click();
       assert.match(await first.getByRole('alert').textContent(), new RegExp(message));
       assert.equal(await second.locator('span').textContent(), 'hot dog');
     }
-    await first.getByRole('textbox').fill('cat');
+    await first.getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).fill('cat');
     await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
     await criteriaPanel.locator('#status').filter({ hasText: 'Save keyword or cancel' }).waitFor();
     await first.getByRole('button', { name: 'Save keyword' }).click();
@@ -641,10 +642,10 @@ try {
   await manyList.locator('.keyword-row').last().getByRole('button', { name: 'Cancel', exact: true }).click();
   const last = manyList.locator('.keyword-row').last();
   await last.getByRole('button', { name: 'Edit', exact: true }).click();
-  await last.getByRole('textbox').fill('replacement');
+  await last.getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).fill('replacement');
   await criteriaPanel.screenshot({ path: 'test-results/individual-keywords-many.png', fullPage: true });
   assert.equal(await criteriaPanel.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-  await last.getByRole('textbox').press('Enter');
+  await last.getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).press('Enter');
   const keywordWorker = context.serviceWorkers()[0];
   await keywordWorker.evaluate(() => { globalThis.keywordOriginalSet = chrome.storage.local.set; chrome.storage.local.set = async () => { throw Error('simulated failure'); }; });
   await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
@@ -660,6 +661,7 @@ try {
   await checkWordTabs(criteriaPanel, id);
   await checkPopupLayout(criteriaPanel, id);
   await checkAutoScroll(context, criteriaPanel, `http://127.0.0.1:${server.address().port}`);
+  await checkKeywordColors(context, criteriaPanel, id, `http://127.0.0.1:${server.address().port}`);
   // A genuinely fresh browser context must not restore transient scrolling sessions.
   await criteriaPanel.evaluate(async () => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -670,6 +672,9 @@ try {
   const freshWorker = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker');
   const sessions = await freshWorker.evaluate(async () => Object.entries(await chrome.storage.session.get(null)).filter(([key]) => key.startsWith('spotadog.scroll.v1.')).map(([, value]) => value));
   assert.ok(sessions.every(state => !state.enabled && !state.pending));
+  const colorProfiles = await freshWorker.evaluate(async () => (await chrome.storage.local.get('spotadog.state'))['spotadog.state'].profiles.filter(p => p.name.startsWith('Colors ')));
+  assert.equal(colorProfiles.length, 2);
+  for (const profile of colorProfiles) assert.deepEqual(profile.positiveKeywords.map(k => k.color), ['#8fc9ff', '#abcdef']);
   assert.deepEqual(errors, []);
   console.log('Browser checks passed: real MV3 loading, profile CRUD, matching/exclusions, dynamic content, toggles, settings, mocked AI review, safe rendering, popup, persistence across browser restart, profile transfers/failures, and repeated extension reloads.');
 } finally {

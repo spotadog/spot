@@ -161,3 +161,8 @@ This table remains the acceptance contract. See the implementation log for what 
 ## Keyword activity by profile mode
 
 [Prompt 014](prompts/014-keyword-activity-by-profile-mode.md) supersedes the temporary selection checkbox behavior above. Checkboxes represent keyword activity consistently: checked is active, unchecked is inactive. View mode disables the input and labels it read-only; edit/create modes update the existing profile draft. Save profile persists activity and Cancel restores saved values. Optional boolean `active` on keyword records defaults to true when absent, preserving legacy matching. Inactive keywords retain their text and criteria in storage/backups and do not match.
+
+
+## Per-keyword colors — prompt 025
+
+[Prompt 025](prompts/025-per-keyword-highlight-colors.md) supersedes fixed highlight colors: adding and editing keywords must offer six presets and a custom picker with a clear selected state. Save profile persists valid six-digit hex colors with the existing keyword data, including backups. Legacy keywords resolve yellow positive/red negative defaults without a migration. Negative overlap precedence follows keyword kind, regardless of selected color.
