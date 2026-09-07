@@ -10,8 +10,9 @@
 <div id="profiles"></div>
 <section id="editor" hidden><h2 id="editor-title">New profile</h2><form id="profile-form">
 <label for="name">Profile name</label><input id="name" required maxlength="80" placeholder="e.g. AI Infrastructure">
-<label for="positive">Positive keywords</label><textarea id="positive" placeholder="GPU&#10;inference&#10;data center"></textarea><small>One word or phrase per line. These are highlighted in yellow with an underline.</small>
-<label for="negative">Negative keywords</label><textarea id="negative" placeholder="gaming&#10;graphics settings"></textarea><small>Highlighted in red, independently of positive matches. Red takes precedence where terms overlap.</small>
+<p class="hint">Add one keyword at a time. Select a row using its checkbox. Save each keyword, then choose Save profile to apply your changes. Cancel closes the profile without applying changes.</p>
+<fieldset class="keyword-list"><legend>Positive keywords</legend><small>Highlighted in yellow with an underline.</small><div id="positive"></div></fieldset>
+<fieldset class="keyword-list"><legend>Negative keywords</legend><small>Highlighted in red. Red takes precedence where terms overlap.</small><div id="negative"></div></fieldset>
 <h3>Keyword matching criteria</h3><p class="hint">Add word, phrase, length, structure or advanced regex criteria. These work alongside the literal keyword lists above. Save profile to apply changes.</p><div id="criteria"></div><button type="button" id="add-criterion">Add criterion</button>
 <label class="inline"><input id="profile-enabled" type="checkbox" checked> Profile enabled</label>
 <div class="actions"><button type="submit" class="primary">Save profile</button><button type="button" id="cancel-edit">Cancel</button></div></form></section>

@@ -15,7 +15,7 @@ npm run build
 2. Click **Load unpacked** and select this repository’s `dist/` directory.
 3. Pin **Spot a Dog** from Chrome’s extensions menu.
 4. Click its toolbar icon to open the full profile editor. No API key is required.
-5. Click **New profile**, enter a name and keywords (one word or phrase per line), then **Save profile**.
+5. Click **New profile**, enter a name, choose **Add Keyword** under either keyword group, enter one word or phrase, and choose **Save keyword**. Repeat as needed, then **Save profile**.
 6. Visit an HTTP or HTTPS webpage. Positive matches appear in yellow with an underline; negative matches appear in red.
 
 The **Use sidebar** toggle saves a global display preference across tabs and browser sessions. Popup mode is the default for new and existing installations without a saved preference. Chrome controls panel visibility: a closed panel is reopened by a toolbar click, not forced open during navigation or startup. If Chrome declines the initial open gesture, **Show sidebar** retries directly; the preference remains saved.
@@ -29,7 +29,7 @@ After rebuilding, click **Reload** on the extension card. Accessible webpages re
 ## Capabilities
 
 - Multiple named profiles with stable IDs, enabled states, and creation/update timestamps.
-- Create, edit, delete, and toggle profiles in the popup or side panel; remove keywords by deleting their lines and saving.
+- Create, edit, delete, and toggle profiles in the popup or side panel; select individual keyword rows, edit and save each keyword, or remove a keyword with confirmation.
 - Global pause removes highlights and disconnects scanning observers while preserving profiles.
 - Case-insensitive literal words and phrases, repeated matches, flexible whitespace, and Unicode-aware word boundaries.
 - [17 selectable keyword match criteria](docs/keyword-match-criteria.md): word/phrase operations, word lengths, numbers, URLs, email, hashtags, mentions and advanced regex in both editors.
@@ -37,6 +37,14 @@ After rebuilding, click **Reload** on the extension card. Accessible webpages re
 - Full profile management and AI review in both popup and side panel; **Use sidebar** persists your preferred display location; separate settings page for optional API configuration.
 - User-reviewed OpenAI suggestions can be added to either positive or negative keyword lists.
 - Local persistence across browser and extension restarts.
+
+## Managing individual keywords
+
+In either editor, **Add Keyword** creates one row in the positive or negative group. Enter one word or phrase and choose **Save keyword**. Select any row with its checkbox; selection is independent and does not change highlighting. **Edit** opens only that keyword. **Cancel** restores its previous value or discards a new row. **Remove** asks for confirmation. Choose **Save profile** to persist additions, edits and removals; canceling or closing the profile editor discards the draft.
+
+Blank values and duplicates within the same group are rejected with a message beside the keyword. Matching ignores case for duplicates; surrounding whitespace is trimmed and repeated whitespace is collapsed. A keyword can belong to both positive and negative groups. Each group allows 200 keywords of up to 120 characters. Punctuation is literal, so a comma does not create another keyword. Empty groups are supported.
+
+Keywords already persist as individual strings in `positiveKeywords` and `negativeKeywords` arrays. This editor keeps that schema, API and backup format, so existing profiles need no migration. Row selection is temporary UI state and is not exported.
 
 ## Profile import and export
 
@@ -64,7 +72,7 @@ Initial limitations:
 - Shadow DOM, iframes, PDFs, canvas text, browser-internal pages, and Chrome Web Store pages are not scanned. File URLs are not enabled.
 - Mutation events are coalesced to at most one full scan per 150 ms. Very large or continuously updating pages may need an incremental scanner later.
 - Pure CSS animation/stylesheet changes without an observed DOM change may require a resize, page refresh, or global off/on to refresh highlights.
-- The initial UI uses explicit Save for profile edits. Unsaved edits are lost when its page closes. Editing the same profile in multiple panels uses the last saved version; distinct profile operations are serialized by the service worker.
+- The UI uses explicit **Save profile** for profile edits. **Save keyword** updates one draft row; pending row edits must be saved or canceled before saving the profile. Selection is local to each row and does not enable/disable matching. Unsaved edits are lost when its page closes. Editing the same profile in multiple panels uses the last saved version; distinct profile operations are serialized by the service worker.
 
 ## Storage and privacy
 

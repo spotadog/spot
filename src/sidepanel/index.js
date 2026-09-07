@@ -1,8 +1,11 @@
+import { keywordEditor } from '../ui/keyword-editor.js';
 import { criteriaEditor } from '../ui/criteria-editor.js';
 import { MAX_IMPORT_BYTES, parseImport } from '../profiles/transfer.js';
 import { request, element, report, action, subscribe, wireGlobal, wirePageStatus } from '../ui/client.js';
 const $ = selector => document.querySelector(selector);
 if (location.pathname.startsWith('/popup/')) document.body.classList.add('popup');
+const positive = keywordEditor($('#positive'), 'Positive');
+const negative = keywordEditor($('#negative'), 'Negative');
 const criteria = criteriaEditor($('#criteria'));
 action($('#add-criterion'), () => criteria.add());
 let state, editingId = null, suggestionProfile = null;
@@ -10,8 +13,8 @@ function edit(profile) {
   editingId = profile?.id ?? null;
   $('#editor-title').textContent = profile ? 'Edit profile' : 'New profile';
   $('#name').value = profile?.name ?? '';
-  $('#positive').value = (profile?.positiveKeywords ?? []).join('\n');
-  $('#negative').value = (profile?.negativeKeywords ?? []).join('\n');
+  positive.load(profile?.positiveKeywords);
+  negative.load(profile?.negativeKeywords);
   criteria.load(profile?.rules?.criteria);
   $('#profile-enabled').checked = profile?.enabled ?? true;
   $('#editor').hidden = false;
@@ -86,7 +89,7 @@ $('#profile-form').addEventListener('submit', async event => {
   const button = event.submitter;
   button.disabled = true;
   try {
-    await request('profile.save', { profile: { id: editingId, name: $('#name').value, positiveKeywords: $('#positive').value, negativeKeywords: $('#negative').value, enabled: $('#profile-enabled').checked, criteria: criteria.read() } });
+    await request('profile.save', { profile: { id: editingId, name: $('#name').value, positiveKeywords: positive.read(), negativeKeywords: negative.read(), enabled: $('#profile-enabled').checked, criteria: criteria.read() } });
     $('#editor').hidden = true;
     report('Profile saved.');
     await refresh();

@@ -14,6 +14,20 @@ const errors = [];
 let context;
 const launch = () => chromium.launchPersistentContext(profileDir, { channel: 'chromium', headless: true, args: [`--disable-extensions-except=${resolve('dist')}`, `--load-extension=${resolve('dist')}`] });
 async function waitFor(page, fn) { await page.waitForFunction(fn); }
+async function addKeyword(page, kind, value) {
+  const list = page.locator(`#${kind}`);
+  await list.getByRole('button', { name: 'Add Keyword', exact: true }).click();
+  const row = list.locator('.keyword-row').last();
+  await row.getByRole('textbox').fill(value);
+  await row.getByRole('button', { name: 'Save keyword', exact: true }).click();
+}
+async function clearKeywords(page, kind) {
+  const remove = page.locator(`#${kind}`).getByRole('button', { name: 'Remove', exact: true });
+  while (await remove.count()) {
+    page.once('dialog', dialog => dialog.accept());
+    await remove.first().click();
+  }
+}
 try {
   context = await launch();
   const worker = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker');
@@ -23,8 +37,8 @@ try {
   await panel.goto(`chrome-extension://${id}/popup/index.html`);
   await panel.getByRole('button', { name: 'New profile' }).click();
   await panel.getByLabel('Profile name').fill('AI Infrastructure');
-  await panel.getByLabel('Positive keywords', { exact: true }).fill('GPU\ninference\ndata center');
-  await panel.getByLabel('Negative keywords', { exact: true }).fill('gaming');
+  for (const term of ['GPU', 'inference', 'data center']) await addKeyword(panel, 'positive', term);
+  await addKeyword(panel, 'negative', 'gaming');
   await panel.getByRole('button', { name: 'Save profile' }).click();
   await panel.getByText('Profile saved.', { exact: true }).waitFor();
   assert.equal(await panel.getByLabel('Use sidebar').isChecked(), false);
@@ -54,7 +68,8 @@ try {
   await panel.getByLabel('AI Infrastructure', { exact: true }).check();
   await waitFor(site, () => CSS.highlights.get('spotadog-matches')?.size === 5);
   await panel.getByRole('button', { name: 'Edit', exact: true }).click();
-  await panel.getByLabel('Positive keywords', { exact: true }).fill('GPU\nCUDA');
+  await clearKeywords(panel, 'positive');
+  for (const term of ['GPU', 'CUDA']) await addKeyword(panel, 'positive', term);
   await panel.getByRole('button', { name: 'Save profile' }).click();
   await waitFor(site, () => CSS.highlights.get('spotadog-matches')?.size === 3);
   const options = await context.newPage();
@@ -362,8 +377,8 @@ try {
   ];
   for (const [type, value, text, expected] of samples) {
     await criteriaPanel.getByRole('button', { name: 'Edit', exact: true }).click();
-    await criteriaPanel.getByLabel('Positive keywords', { exact: true }).fill('');
-    await criteriaPanel.getByLabel('Negative keywords', { exact: true }).fill('');
+    await clearKeywords(criteriaPanel, 'positive');
+    await clearKeywords(criteriaPanel, 'negative');
     if (!await criteriaPanel.locator('.criterion').count()) await criteriaPanel.getByRole('button', { name: 'Add criterion', exact: true }).click();
     assert.equal(await criteriaPanel.getByLabel('Match type', { exact: true }).locator('option').count(), 17);
     await criteriaPanel.getByLabel('Match type', { exact: true }).selectOption(type);
@@ -414,6 +429,89 @@ try {
   await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
   await criteriaPanel.getByText('Profile saved.', { exact: true }).waitFor();
   await waitFor(importPage, () => CSS.highlights.size === 0);
+  // Individual keyword workflow in both shared interfaces, including persisted old arrays.
+  for (const surface of ['popup', 'sidepanel']) {
+    await criteriaPanel.goto(`chrome-extension://${id}/${surface}/index.html`);
+    await criteriaPanel.locator('#profiles').getByRole('button', { name: 'Edit', exact: true }).click();
+    const positive = criteriaPanel.locator('#positive');
+    assert.equal(await positive.locator('.keyword-row').count(), 0);
+    assert.equal(await positive.getByText('No keywords yet. Choose Add Keyword to start.').isVisible(), true);
+    await addKeyword(criteriaPanel, 'positive', '  dog  ');
+    await addKeyword(criteriaPanel, 'positive', 'hot dog');
+    const first = positive.locator('.keyword-row').first();
+    const second = positive.locator('.keyword-row').nth(1);
+    await first.getByRole('checkbox').check();
+    assert.equal(await second.getByRole('checkbox').isChecked(), false);
+    await first.getByRole('button', { name: 'Edit', exact: true }).click();
+    for (const [value, message] of [[' ', 'Enter a keyword or phrase.'], ['HOT DOG', 'already exists'], ['x'.repeat(121), 'under 121']]) {
+      await first.getByRole('textbox').fill(value);
+      await first.getByRole('button', { name: 'Save keyword' }).click();
+      assert.match(await first.getByRole('alert').textContent(), new RegExp(message));
+      assert.equal(await second.locator('span').textContent(), 'hot dog');
+    }
+    await first.getByRole('textbox').fill('cat');
+    await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
+    await criteriaPanel.locator('#status').filter({ hasText: 'Save keyword or cancel' }).waitFor();
+    await first.getByRole('button', { name: 'Save keyword' }).click();
+    assert.equal(await first.getByRole('checkbox').isChecked(), true);
+    await addKeyword(criteriaPanel, 'negative', 'cat'); // Duplicates across colors remain allowed.
+    await positive.getByRole('button', { name: 'Add Keyword', exact: true }).click();
+    await positive.locator('.keyword-row').last().getByRole('button', { name: 'Cancel', exact: true }).click();
+    await criteriaPanel.screenshot({ path: `test-results/individual-keywords-${surface}.png`, fullPage: true });
+    await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
+    await criteriaPanel.getByText('Profile saved.', { exact: true }).waitFor();
+    const stored = await criteriaPanel.evaluate(async () => (await chrome.runtime.sendMessage({ type: 'state.get' })).data.profiles[0]);
+    assert.deepEqual(stored.positiveKeywords, ['cat', 'hot dog']);
+    assert.deepEqual(stored.negativeKeywords, ['cat']);
+    await criteriaPanel.reload();
+    await criteriaPanel.locator('#profiles').getByRole('button', { name: 'Edit', exact: true }).click();
+    assert.deepEqual(await positive.locator('.keyword-row span').allTextContents(), ['cat', 'hot dog']);
+    criteriaPanel.once('dialog', dialog => dialog.dismiss());
+    await positive.locator('.keyword-row').first().getByRole('button', { name: 'Remove' }).click();
+    assert.equal(await positive.locator('.keyword-row').count(), 2);
+    criteriaPanel.once('dialog', dialog => dialog.accept());
+    await positive.locator('.keyword-row').first().getByRole('button', { name: 'Remove' }).click();
+    assert.deepEqual(await positive.locator('.keyword-row span').allTextContents(), ['hot dog']);
+    await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
+    await criteriaPanel.getByText('Profile saved.', { exact: true }).waitFor();
+    assert.deepEqual(await criteriaPanel.evaluate(async () => (await chrome.runtime.sendMessage({ type: 'state.get' })).data.profiles[0].positiveKeywords), ['hot dog']);
+    await criteriaPanel.locator('#profiles').getByRole('button', { name: 'Edit', exact: true }).click();
+    await clearKeywords(criteriaPanel, 'positive');
+    await clearKeywords(criteriaPanel, 'negative');
+    await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
+    await criteriaPanel.getByText('Profile saved.', { exact: true }).waitFor();
+    assert.equal(await criteriaPanel.locator('#profile-form textarea').count(), 0);
+  }
+  // A full pre-existing array renders individually, retains order, and supports edits at capacity.
+  const many = Array.from({ length: 200 }, (_, i) => `keyword ${i}`);
+  await criteriaPanel.evaluate(async words => {
+    const profile = (await chrome.runtime.sendMessage({ type: 'state.get' })).data.profiles[0];
+    await chrome.runtime.sendMessage({ type: 'profile.save', profile: { ...profile, positiveKeywords: words } });
+  }, many);
+  await criteriaPanel.reload();
+  await criteriaPanel.setViewportSize({ width: 320, height: 700 });
+  await criteriaPanel.locator('#profiles').getByRole('button', { name: 'Edit', exact: true }).click();
+  const manyList = criteriaPanel.locator('#positive');
+  assert.deepEqual(await manyList.locator('.keyword-row span').allTextContents(), many);
+  await addKeyword(criteriaPanel, 'positive', 'one too many');
+  await manyList.getByRole('alert').filter({ hasText: '200' }).waitFor();
+  await manyList.locator('.keyword-row').last().getByRole('button', { name: 'Cancel', exact: true }).click();
+  const last = manyList.locator('.keyword-row').last();
+  await last.getByRole('button', { name: 'Edit', exact: true }).click();
+  await last.getByRole('textbox').fill('replacement');
+  await criteriaPanel.screenshot({ path: 'test-results/individual-keywords-many.png', fullPage: true });
+  assert.equal(await criteriaPanel.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  await last.getByRole('textbox').press('Enter');
+  const keywordWorker = context.serviceWorkers()[0];
+  await keywordWorker.evaluate(() => { globalThis.keywordOriginalSet = chrome.storage.local.set; chrome.storage.local.set = async () => { throw Error('simulated failure'); }; });
+  await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
+  await criteriaPanel.locator('#status').filter({ hasText: 'simulated failure' }).waitFor();
+  assert.equal(await last.locator('span').textContent(), 'replacement');
+  assert.deepEqual(await criteriaPanel.evaluate(async () => (await chrome.runtime.sendMessage({ type: 'state.get' })).data.profiles[0].positiveKeywords), many);
+  await keywordWorker.evaluate(() => { chrome.storage.local.set = globalThis.keywordOriginalSet; });
+  await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
+  await criteriaPanel.getByText('Profile saved.', { exact: true }).waitFor();
+  assert.deepEqual(await criteriaPanel.evaluate(async () => (await chrome.runtime.sendMessage({ type: 'state.get' })).data.profiles[0].positiveKeywords), [...many.slice(0, -1), 'replacement']);
   assert.deepEqual(errors, []);
   console.log('Browser checks passed: real MV3 loading, profile CRUD, matching/exclusions, dynamic content, toggles, settings, mocked AI review, safe rendering, popup, persistence across browser restart, profile transfers/failures, and repeated extension reloads.');
 } finally {

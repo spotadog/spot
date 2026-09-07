@@ -14,6 +14,14 @@ export function normalizeKeywords(value) {
     return [clean];
   });
 }
+// Validate one explicit edit without the bulk normalizer's silent empty/duplicate removal.
+export function validateKeyword(value, others = []) {
+  const [clean] = normalizeKeywords([value]);
+  if (!clean) throw new Error('Enter a keyword or phrase.');
+  if (others.some(term => term.toLowerCase() === clean.toLowerCase())) throw new Error('This keyword already exists in this list. Choose a different keyword.');
+  if (others.length >= 200) throw new Error('Use at most 200 keywords per list.');
+  return clean;
+}
 export function mergeKeywords(existing, candidates) {
   const merged = new Map(existing.map(term => [term.toLowerCase(), term]));
   for (const term of normalizeKeywords(candidates)) {
