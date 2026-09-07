@@ -175,3 +175,11 @@ Prompt 002 is the repository's only publication workflow: current `main` branch,
 - Validation: npm run check passed 76 unit tests, build and the automated MV3 suite, including new popup/sidebar coverage for sequential/rapid additions, invalid/duplicate input, removal/re-addition, background updates, field edits, save failure/retry and complete persistence. Corrected a new test's expected length-error wording. No manual browser testing.
 - Publication: current main, no new branch, existing SSH identity; origin fetched without divergence. Invalid GitHub CLI authentication requires the documented repository/commit review-note fallback.
 - Next step: user to reload the extension and verify live creation. A separate reproduction will be needed if keywords disappear without search filtering; long lists continue to use normal page scrolling and only the selected word tab is shown.
+
+## Stable popup layout — prompt 019
+
+- Request: investigate popup width oscillation, preserve scrolling/responsiveness, add automated coverage, and publish through the existing flow.
+- Removed the popup body height cap/overflow override, replaced viewport-unit sizing with the existing preferred width bounded by available document width, and reserved the popup root scrollbar gutter. Body geometry now contains long content and scrolling belongs to the document; other surfaces retain their rules.
+- Pre-change automated measurements confirmed a 600px body with 2158px overflowing content. Scrolling moves that overflow bottom into the viewport, explaining how native sizing could settle. Native toolbar oscillation was not reproduced in the tab-based harness; the remaining acceptance step is the user's Chrome check.
+- npm run check passed all 76 unit tests, build, and automated MV3 browser checks, including new short/long content and scroll-position layout regressions at 320/420/680px. The old CSS fails the regression. No manual/live testing performed.
+- Publication: main, existing SSH identity, no new branch. Invalid GitHub CLI authentication requires the documented repository/commit review-note fallback. See prompt 019 for investigation evidence, limitations, and next steps.

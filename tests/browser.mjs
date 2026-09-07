@@ -1,3 +1,4 @@
+import { checkPopupLayout } from './popup-layout.mjs';
 import { checkNewProfileKeywords } from './new-profile-keywords.mjs';
 import { checkWordTabs } from './word-tabs.mjs';
 import { checkProfileView } from './profile-view.mjs';
@@ -656,6 +657,7 @@ try {
   await checkProfileView(criteriaPanel, id);
   await checkNewProfileKeywords(criteriaPanel, id, keywordWorker);
   await checkWordTabs(criteriaPanel, id);
+  await checkPopupLayout(criteriaPanel, id);
   assert.deepEqual(errors, []);
   console.log('Browser checks passed: real MV3 loading, profile CRUD, matching/exclusions, dynamic content, toggles, settings, mocked AI review, safe rendering, popup, persistence across browser restart, profile transfers/failures, and repeated extension reloads.');
 } finally {
