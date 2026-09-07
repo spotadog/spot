@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
-const source = (await readFile(new URL('../src/content/index.js', import.meta.url), 'utf8')).replace("import { Scanner } from './scanner.js';", '');
+const source = (await readFile(new URL('../src/content/index.js', import.meta.url), 'utf8')).replace(/^import .*;$/gm, '');
 const flush = () => new Promise(resolve => setImmediate(resolve));
 function fixture() {
   const listeners = new Set(), pending = [], scanners = [];
@@ -11,7 +11,7 @@ function fixture() {
     update(state) { if (state.fail) throw Error('paint'); this.updates.push(state); }
     stop() { this.stops++; }
   }
-  const context = vm.createContext({ Scanner, chrome: { runtime: {
+  const context = vm.createContext({ Scanner, document: {}, persistCountHistory() {}, chrome: { runtime: {
     onMessage: { addListener(fn) { listeners.add(fn); }, removeListener(fn) { listeners.delete(fn); } },
     sendMessage() { return new Promise((resolve, reject) => pending.push({ resolve, reject })); }
   } } });

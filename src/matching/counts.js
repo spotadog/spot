@@ -24,3 +24,29 @@ export function summarizeCounts(units, entries) {
   }
   return Object.fromEntries([...totals].map(([key, total]) => [key, { repeated: total.repeated, unique: total.contexts.size }]));
 }
+
+// Preserve each normalized context's largest observed multiplicity. A snapshot
+// may be only a page/window; absence is never evidence of historical deletion.
+export function contextCounts(units) {
+  const result = {};
+  for (const unit of units) for (const { key, context, repeated } of unit) {
+    const contexts = result[key] ??= {};
+    const id = JSON.stringify(context);
+    contexts[id] = (contexts[id] ?? 0) + repeated;
+  }
+  return result;
+}
+export function mergeCountHistory(previous = {}, incoming = {}) {
+  const result = structuredClone(previous);
+  for (const [key, contexts] of Object.entries(incoming)) {
+    const target = result[key] ??= {};
+    for (const [context, count] of Object.entries(contexts)) target[context] = Math.max(target[context] ?? 0, count);
+  }
+  return result;
+}
+export function historyTotals(history, entries) {
+  return Object.fromEntries(entries.map(({ key }) => {
+    const counts = Object.values(history[key] ?? {});
+    return [key, { repeated: counts.reduce((sum, count) => sum + count, 0), unique: counts.length }];
+  }));
+}

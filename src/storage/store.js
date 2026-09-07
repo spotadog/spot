@@ -1,3 +1,4 @@
+import { mergeCountHistory, historyTotals, countEntries } from '../matching/counts.js';
 import { initialState, DEFAULT_PREFERENCES } from '../profiles/model.js';
 import { normalizePreferences, validateSelection } from '../services/models.js';
 const STATE = 'spotadog.state';
@@ -26,6 +27,30 @@ export function createStore(area = chrome.storage.local) {
         const result = await change(state);
         await area.set({ [STATE]: result, ...credentials });
         return result;
+      });
+      queue = next.catch(() => {});
+      return next;
+    },
+    recordCounts(page, observations) {
+      const next = queue.then(async () => {
+        if (!/^[a-f0-9]{64}$/.test(page) || !observations || typeof observations !== 'object' || Array.isArray(observations)) throw new Error('Invalid count history.');
+        const state = await this.read();
+        const entries = countEntries(state.profiles);
+        const allowed = new Set(entries.map(entry => entry.key));
+        const incoming = {};
+        if (state.enabled && state.preferences.tracking) for (const [key, contexts] of Object.entries(observations)) {
+          if (!allowed.has(key)) continue;
+          if (!contexts || typeof contexts !== 'object' || Array.isArray(contexts)) throw new Error('Invalid count contexts.');
+          for (const [context, count] of Object.entries(contexts)) {
+            if (!/^[a-f0-9]{64}$/.test(context) || !Number.isSafeInteger(count) || count <= 0) throw new Error('Invalid count observation.');
+          }
+          incoming[key] = contexts;
+        }
+        const storageKey = `spotadog.counts.v1.${page}`;
+        const previous = (await area.get(storageKey))[storageKey] ?? {};
+        const merged = mergeCountHistory(previous, incoming);
+        if (JSON.stringify(merged) !== JSON.stringify(previous)) await area.set({ [storageKey]: merged });
+        return historyTotals(merged, entries);
       });
       queue = next.catch(() => {});
       return next;

@@ -1,3 +1,4 @@
+import { fingerprintHistory } from '../storage/count-history.js';
 import { createStore, scanningState } from '../storage/store.js';
 import { makeProfile, mergeKeywords } from '../profiles/model.js';
 import { suggestKeywords } from '../services/ai.js';
@@ -55,6 +56,12 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 async function handle(message, sender) {
   await ready;
+  if (message.type === 'counts.record') {
+    if (sender.id !== chrome.runtime.id || !sender.tab || sender.frameId !== 0 || !/^https?:\/\//.test(sender.url ?? '')) throw new Error('Invalid count source.');
+    if (typeof message.url !== 'string' || !/^https?:\/\//.test(message.url)) throw new Error('Invalid count page.');
+    const { page, observations } = await fingerprintHistory(message.url, message.history);
+    return store.recordCounts(page, observations);
+  }
   if (message.type === 'scan.get') return scanningState(await store.read());
   const trusted = sender.id === chrome.runtime.id && sender.url?.startsWith(chrome.runtime.getURL(''));
   if (!trusted) throw new Error('This action is only available in Spot a Dog.');

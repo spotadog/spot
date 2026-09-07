@@ -85,7 +85,14 @@ try {
   await site.bringToFront();
   await gpuCount.filter({ hasText: 'Unique in context: 3 · Repeated: 4' }).waitFor();
   await site.evaluate(() => document.querySelector('#count-fixture').remove());
-  await gpuCount.filter({ hasText: 'Unique in context: 2 · Repeated: 2' }).waitFor();
+  await gpuCount.filter({ hasText: 'Unique in context: 3 · Repeated: 4' }).waitFor();
+  await site.reload();
+  await gpuCount.filter({ hasText: 'Unique in context: 3 · Repeated: 4' }).waitFor();
+  await site.evaluate(() => {
+    const p = document.createElement('p'); p.textContent = 'GPU gpu'; document.body.append(p);
+  });
+  await gpuCount.filter({ hasText: 'Unique in context: 3 · Repeated: 4' }).waitFor();
+  await site.evaluate(() => document.body.lastElementChild.remove());
   await panel.getByLabel('Track keyword occurrences').uncheck();
   await gpuCount.waitFor({ state: 'hidden' });
   await site.evaluate(() => { const p = document.createElement('p'); p.id = 'dynamic'; p.textContent = 'CUDA GPU'; document.body.append(p); });

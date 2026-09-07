@@ -1,8 +1,9 @@
 import { Scanner } from './scanner.js';
+import { persistCountHistory } from './count-history.js';
 // A reinjected bundle shares the extension's isolated world. Dispose its predecessor.
 const key = '__spotadogContent';
 globalThis[key]?.dispose();
-const scanner = new Scanner();
+const scanner = new Scanner(document, persistCountHistory);
 let receivedUpdate = false, disposed = false;
 function update(state) {
   try { scanner.update(state); return { ok: true }; }

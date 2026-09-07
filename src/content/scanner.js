@@ -1,16 +1,20 @@
-import { countEntries, countUnit, summarizeCounts } from '../matching/counts.js';
+import { countEntries, countUnit, contextCounts, mergeCountHistory, historyTotals } from '../matching/counts.js';
 import { findMatches, resolveHighlights } from '../matching/matcher.js';
 import { Highlighter } from '../highlighting/highlighter.js';
 const SKIP = 'script,style,noscript,textarea,input,select,option,pre,code,kbd,samp,svg,canvas,[hidden],[inert],[aria-hidden="true"],[contenteditable]:not([contenteditable="false"])';
 export class Scanner {
-  constructor(doc = document) {
+  constructor(doc = document, persistCounts = null) {
     this.doc = doc;
+    this.persistCounts = persistCounts;
+    this.histories = new Map();
+    this.revision = 0;
     this.win = doc.defaultView;
     this.highlighter = new Highlighter(this.win);
     this.state = { enabled: false, profiles: [] };
     this.cache = new WeakMap();
     this.counts = null;
     this.route = () => {
+      this.revision++;
       this.counts = null;
       this.cache = new WeakMap();
       this.schedule();
@@ -26,7 +30,7 @@ export class Scanner {
     this.state = state;
     this.entries = state.tracking ? countEntries(state.profiles) : [];
     this.url = this.win.location.href;
-    if (state.tracking && state.enabled) this.counts = summarizeCounts([], this.entries);
+    if (state.tracking && state.enabled) this.recordCounts([]);
     if (!state.enabled || !state.profiles.some(p => p.enabled && (p.positiveKeywords.length || p.negativeKeywords.length || p.rules?.criteria?.length))) return;
     this.observer.observe(this.doc.documentElement, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class', 'style', 'hidden', 'open', 'aria-hidden', 'contenteditable', 'inert'] });
     this.win.addEventListener('resize', this.schedule);
@@ -39,6 +43,7 @@ export class Scanner {
     this.scan();
   }
   stop() {
+    this.revision++;
     this.observer.disconnect();
     this.win.clearTimeout(this.timer);
     this.timer = null;
@@ -56,15 +61,27 @@ export class Scanner {
     if (this.url !== this.win.location.href) { this.url = this.win.location.href; this.route(); }
     return this.counts;
   }
+  recordCounts(units) {
+    const url = this.url;
+    const history = mergeCountHistory(this.histories.get(url), contextCounts(units));
+    this.histories.set(url, history);
+    if (!this.persistCounts) { this.counts = historyTotals(history, this.entries); return; }
+    const revision = ++this.revision;
+    // Only acknowledged storage totals are displayed. Late replies from a
+    // previous route/configuration must not replace the current snapshot.
+    Promise.resolve(this.persistCounts(url, history)).then(counts => {
+      if (revision === this.revision) this.counts = counts;
+    }).catch(() => { if (revision === this.revision) this.counts = null; });
+  }
   scan() {
     if (!this.state.enabled) return;
+    if (this.url !== this.win.location.href) { this.url = this.win.location.href; this.counts = null; this.revision++; }
     if (!this.doc.body) {
       this.highlighter.clear();
-      if (this.state.tracking) this.counts = summarizeCounts([], this.entries);
+      if (this.state.tracking) this.recordCounts([]);
       return;
     }
     const ranges = [], units = [];
-    this.url = this.win.location.href;
     const walker = this.doc.createTreeWalker(this.doc.body, this.win.NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       const element = node.parentElement;
@@ -88,7 +105,7 @@ export class Scanner {
         if (range.getClientRects().length) ranges.push({ range, kind: match.kind });
       }
     }
-    if (this.state.tracking) this.counts = summarizeCounts(units, this.entries);
+    if (this.state.tracking) this.recordCounts(units);
     this.highlighter.paint(ranges);
   }
 }

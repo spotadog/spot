@@ -41,7 +41,7 @@ For manual acceptance, check the pinned icon at normal and high-DPI display scal
 - Global pause removes highlights and disconnects scanning observers while preserving profiles.
 - Case-insensitive literal words and phrases, repeated matches, flexible whitespace, and Unicode-aware word boundaries.
 - [17 selectable keyword match criteria](docs/keyword-match-criteria.md): word/phrase operations, word lengths, numbers, URLs, email, hashtags, mentions and advanced regex in both editors.
-- Optional [live keyword counts](docs/features.md#live-keyword-counts) beside saved keyword rows, with separate repeated and normalized text-context totals.
+- Optional [live keyword counts](docs/features.md#live-keyword-counts) beside saved keyword rows, with cumulative per-URL repeated and normalized text-context totals that survive refreshes.
 - Dynamic content, text edits, and common visibility attribute changes trigger a throttled rescan.
 - Full profile management and AI review in both popup and side panel; **Use sidebar** persists your preferred display location; separate settings page for optional API configuration.
 - User-reviewed OpenAI or Anthropic Claude suggestions can be added to either positive or negative keyword lists.
@@ -87,7 +87,7 @@ Initial limitations:
 
 ## Storage and privacy
 
-`src/storage/store.js` is the sole Chrome storage adapter. `chrome.storage.local` stores versioned profile/settings data under `spotadog.state` and optional provider keys separately under `spotadog.apiKey` (OpenAI) and `spotadog.anthropicApiKey` (Anthropic). No Chrome sync storage is used. Uninstalling the extension removes its local data.
+`src/storage/store.js` is the sole Chrome storage adapter. `chrome.storage.local` stores versioned profile/settings data under `spotadog.state` and optional provider keys separately under `spotadog.apiKey` (OpenAI) and `spotadog.anthropicApiKey` (Anthropic). Historical keyword counts use separate `spotadog.counts.v1.<SHA-256 URL>` records containing per-keyword hashed context multiplicities; see [count semantics and limits](docs/features.md#live-keyword-counts). No Chrome sync storage is used. Uninstalling the extension removes its local data.
 
 The worker restricts local storage to `TRUSTED_CONTEXTS`. Content scripts receive only enabled state and scanning profile fields through validated messages; they cannot read settings or the API key or invoke profile/settings mutations. Extension UI reads only whether a key exists, not its value. The key is persisted locally **without encryption**; this personal bring-your-own-key implementation is intended for a trusted browser profile, not for embedding a developer’s shared secret in a distributed extension.
 

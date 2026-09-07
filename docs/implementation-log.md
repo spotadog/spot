@@ -158,3 +158,12 @@ Prompt 002 is the repository's only publication workflow: current `main` branch,
 - Validation: npm run check passed all 71 unit tests, build and the full automated MV3 suite, including new two-surface tab, focus, data preservation and 200-row layout checks at 320/680px. git diff --check passed. Fixed a new test fixture to read full saved data after receiving the profile ID. No manual/live browser testing was performed.
 - Publication: current main branch, existing SSH identity, no new branch; origin fetched with no divergence. CLI authentication remains invalid, so this log, prompt notes and commit description provide the documented review-note fallback.
 - Issues/next steps: no known implementation blockers; user to verify live Chrome behavior and page scrolling.
+
+
+## Cumulative keyword appearances — prompt 017
+
+- Request/root cause: prevent historical counts falling after refreshes or partial updates. The previous scanner rebuilt counts only from current visible DOM and discarded all history on updates/reload.
+- Changes: per-URL, per-keyword context multiplicity history with idempotent maximum merges, worker-side fingerprints, serialized local persistence and stale-response guards. Existing matching/profile schemas remain compatible; technical semantics and limitations are in features.md and the complete prompt 017.
+- Validation: npm run check passed 76 unit tests, build and automated MV3 browser checks, including smaller batches, new/duplicate contexts, out-of-order replies/writes, failed writes and reload persistence. No manual browser testing.
+- Issues/next steps: previously discarded counts are unrecoverable; indistinguishable identical contexts in separate batches retain maximum multiplicity. User to verify representative live sites. Histories remain per exact URL and are subject to local-storage quota.
+- Publication: current main, no new branch, existing SSH identity; origin fetched without divergence. Invalid GitHub CLI authentication requires the documented repository/commit review-note fallback.

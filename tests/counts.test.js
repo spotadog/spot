@@ -53,7 +53,7 @@ test('disabled tracking has no count processing or route listeners; enabled coun
   f.scanner.update(state);
   assert.deepEqual(f.scanner.snapshot()[key()], { repeated: 1, unique: 1 });
 });
-test('batched dynamic additions, repeated observations, edits, visibility and removals replace counts', () => {
+test('batched dynamic additions, repeated observations, edits, visibility and removals preserve history', () => {
   const f = fixture(); const node = f.add('GPU'); f.scanner.update(state);
   const cached = f.scanner.cache.get(node);
   f.add('GPU'); f.mutate(); f.mutate(); f.mutate();
@@ -61,11 +61,11 @@ test('batched dynamic additions, repeated observations, edits, visibility and re
   assert.equal(f.scanner.cache.get(node), cached);
   assert.deepEqual(f.scanner.snapshot()[key()], { repeated: 2, unique: 1 });
   node.textContent = 'GPU gpu'; f.mutate(); f.flush();
-  assert.deepEqual(f.scanner.snapshot()[key()], { repeated: 3, unique: 2 });
+  assert.deepEqual(f.scanner.snapshot()[key()], { repeated: 4, unique: 2 });
   node.parentElement.checkVisibility = () => false; f.mutate(); f.flush();
-  assert.deepEqual(f.scanner.snapshot()[key()], { repeated: 1, unique: 1 });
+  assert.deepEqual(f.scanner.snapshot()[key()], { repeated: 4, unique: 2 });
   f.nodes.splice(0); f.mutate(); f.flush();
-  assert.deepEqual(f.scanner.snapshot()[key()], { repeated: 0, unique: 0 });
+  assert.deepEqual(f.scanner.snapshot()[key()], { repeated: 4, unique: 2 });
 });
 test('route changes invalidate stale counts; disable cancels pending work and cleans up', () => {
   const f = fixture(); f.add('GPU'); f.scanner.update(state);
@@ -85,14 +85,49 @@ test('route changes invalidate stale counts; disable cancels pending work and cl
   f.mutate(); assert.equal(f.timers.size, 0);
 });
 
-test('empty body and profile replacement discard previous page contributions', () => {
+test('empty body preserves history and profile replacement selects only current keywords', () => {
   const f = fixture(); f.add('GPU'); f.scanner.update(state);
   f.scanner.doc.body = null; f.mutate(); f.flush();
-  assert.deepEqual(f.scanner.snapshot()[key()], { repeated: 0, unique: 0 });
+  assert.deepEqual(f.scanner.snapshot()[key()], { repeated: 1, unique: 1 });
   f.scanner.doc.body = {};
   f.scanner.update({ ...state, profiles: [{ ...profile, positiveKeywords: ['missing'] }] });
   assert.equal(f.scanner.snapshot()[key()], undefined);
   assert.deepEqual(f.scanner.snapshot()[key('missing')], { repeated: 0, unique: 0 });
   f.scanner.update({ ...state, profiles: [] });
   assert.deepEqual(f.scanner.snapshot(), {});
+});
+
+test('smaller scans, repeated state updates and same URL navigation preserve history', () => {
+  const f = fixture();
+  for (let i = 0; i < 15; i++) f.add('GPU');
+  f.scanner.update(state);
+  f.nodes.splice(12); f.scanner.scan();
+  assert.equal(f.scanner.snapshot()[key()].repeated, 15);
+  for (const text of ['GPU one', 'GPU two', 'GPU three']) f.add(text);
+  f.scanner.scan();
+  assert.equal(f.scanner.snapshot()[key()].repeated, 18);
+  f.scanner.scan(); f.scanner.update(state);
+  assert.equal(f.scanner.snapshot()[key()].repeated, 18);
+  f.events.get('navigatesuccess')(); f.flush();
+  assert.equal(f.scanner.snapshot()[key()].repeated, 18);
+  f.scanner.update({ ...state, tracking: false });
+  f.scanner.update(state);
+  assert.equal(f.scanner.snapshot()[key()].repeated, 18);
+});
+
+test('late persistence replies cannot replace newer counts or cross routes', async () => {
+  const f = fixture(), replies = [];
+  f.scanner.persistCounts = () => new Promise(resolve => replies.push(resolve));
+  f.add('GPU'); f.scanner.update(state);
+  f.add('GPU new'); f.scanner.scan();
+  const latest = { [key()]: { repeated: 2, unique: 2 } };
+  replies.pop()(latest); await Promise.resolve();
+  for (const resolve of replies.splice(0)) resolve({ [key()]: { repeated: 1, unique: 1 } });
+  await Promise.resolve();
+  assert.deepEqual(f.scanner.snapshot(), latest);
+  f.scanner.scan();
+  f.win.location.href = 'https://example.test/b';
+  assert.equal(f.scanner.snapshot(), null);
+  replies.pop()(latest); await Promise.resolve();
+  assert.equal(f.scanner.snapshot(), null);
 });
