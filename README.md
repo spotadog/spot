@@ -22,6 +22,14 @@ The **Use sidebar** toggle saves a global display preference across tabs and bro
 
 After rebuilding, click **Reload** on the extension card. Accessible webpages refresh their scanners automatically; refresh a page manually if Chrome prevents reinjection. Keep loading from the same directory to retain the extension identity and storage. No runtime dependencies or remote scripts are used; esbuild bundles local JavaScript, and Playwright is used only for development tests.
 
+## Extension icon
+
+The toolbar and extension listing use a cream paw on the existing green UI color. Editable source is `src/icons/icon.svg`; committed PNGs cover 16, 20, 24, 32, 40, 48, 64, 128 and 256 pixels. `manifest.json` declares both `icons` and `action.default_icon`, following Chrome’s [extension icon](https://developer.chrome.com/docs/extensions/reference/manifest/icons) and [action icon](https://developer.chrome.com/docs/extensions/reference/api/action#icon) configuration.
+
+After editing the SVG, run `npm run icons` (requires the development Playwright Chromium installed by `npx playwright install chromium`), then `npm run check`. The normal build copies the committed PNGs into `dist/icons/` and does not need a browser to generate assets. Load `dist/`, reload after rebuilding, and pin Spot a Dog from the extensions menu to show its paw in the toolbar.
+
+For manual acceptance, check the pinned icon at normal and high-DPI display scales, click it to open the editor, and check `chrome://extensions` for errors. Automated loading, PNG decoding/dimensions, packaging and diagnostics were verified; native toolbar visual confirmation still requires a desktop display.
+
 ## Product documentation
 
 [Product features](docs/features.md) and [functional requirements](docs/requirements.md) define the product behavior. The extension implements independent positive and negative highlights and explicit AI candidate dismissal. See the [implementation log](docs/implementation-log.md) for the dependency map, verification evidence, and remaining manual checks.
@@ -110,6 +118,7 @@ References used for the implementation: [OpenAI structured outputs](https://deve
 ```text
 manifest.json              Extension configuration and permissions
 src/
+  icons/                   Editable SVG and packaged toolbar/extension PNGs
   background/worker.js     Message authorization, serialized mutations, state broadcasts
   popup/                   Popup entry point using the shared profile interface
   sidepanel/               Shared profile editor, display toggle, and AI review

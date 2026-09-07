@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <title>Spot a Dog</title>
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="#246447"/>
+  <g fill="#f6f7f3">
+    <ellipse cx="30" cy="53" rx="10" ry="14" transform="rotate(-25 30 53)"/>
+    <ellipse cx="51" cy="34" rx="10" ry="14" transform="rotate(-10 51 34)"/>
+    <ellipse cx="77" cy="34" rx="10" ry="14" transform="rotate(10 77 34)"/>
+    <ellipse cx="98" cy="53" rx="10" ry="14" transform="rotate(25 98 53)"/>
+    <path d="M64 59C53 59 48 70 39 79C26 93 37 110 51 105C60 102 68 102 77 105C91 110 102 93 89 79C80 70 75 59 64 59Z"/>
+  </g>
+</svg>
