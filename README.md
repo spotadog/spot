@@ -1,5 +1,7 @@
 # Spot a Dog
 
+![Spot a Dog banner](docs/spotadogbanner.png)
+
 A Manifest V3 Chrome extension that highlights the words and phrases you care about. Create topic profiles, add positive and negative keywords, and keep the side panel open as you browse.
 
 ## Get started
@@ -17,6 +19,8 @@ npm run build
 4. Click its toolbar icon to open the full profile editor. No API key is required.
 5. Click **New profile**, enter a name, choose **Add Keyword** under either keyword group, enter one word or phrase, and choose **Save keyword**. Repeat as needed, then **Save profile**.
 6. Visit an HTTP or HTTPS webpage. Positive matches appear in yellow with an underline; negative matches appear in red.
+
+![Spot a Dog in action](docs/screen_shot.png)
 
 The **Use sidebar** toggle saves a global display preference across tabs and browser sessions. Popup mode is the default for new and existing installations without a saved preference. Chrome controls panel visibility: a closed panel is reopened by a toolbar click, not forced open during navigation or startup. If Chrome declines the initial open gesture, **Show sidebar** retries directly; the preference remains saved.
 
