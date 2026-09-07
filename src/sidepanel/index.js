@@ -20,7 +20,7 @@ function setEditMode(value) {
   negative.setEditable(value);
   $('#edit-help').textContent = value
     ? 'Save each keyword, then choose Save profile to apply changes. Cancel returns to viewing.'
-    : 'Select a keyword to inspect it. Choose Edit to make changes.';
+    : 'Checkboxes show keyword activity and are read-only. Choose Edit to make changes.';
 }
 function view(profile, editable = false) {
   editingId = profile?.id ?? null;

@@ -1,4 +1,4 @@
-import { keywordText, keywordCriterion } from '../profiles/keyword.js';
+import { keywordText, keywordCriterion, keywordActive } from '../profiles/keyword.js';
 import { validateCriterion } from './criteria.js';
 const word = /[\p{L}\p{N}_]/u;
 const escape = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -110,6 +110,7 @@ export function findMatches(text, profiles) {
     }
     for (const [kind, keywords] of [['positive', profile.positiveKeywords], ['negative', profile.negativeKeywords]]) {
       for (const keyword of keywords) {
+        if (!keywordActive(keyword)) continue;
         let hits;
         try {
           const criterion = keywordCriterion(keyword, kind);

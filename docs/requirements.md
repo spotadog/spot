@@ -148,3 +148,8 @@ This table remains the acceptance contract. See the implementation log for what 
 ## R17 — Per-keyword matching criteria
 
 [Prompt 013](prompts/013-per-keyword-matching-criteria.md) associates an optional criterion with each keyword. Add/Edit Keyword exposes the existing 17 types, preserves the selected criterion and uses the keyword text as the word/phrase/regex search value. Numeric and structural recognition retain their documented behavior. Unset criteria preserve default literal matching. Mixed criteria in a profile, legacy strings and independent legacy rules, transfer, AI approval and individual editing must preserve unrelated keywords. Invalid criteria and regex fail safely. This supersedes the separate profile criterion editor described in R13.
+
+
+## Keyword activity by profile mode
+
+[Prompt 014](prompts/014-keyword-activity-by-profile-mode.md) supersedes the temporary selection checkbox behavior above. Checkboxes represent keyword activity consistently: checked is active, unchecked is inactive. View mode disables the input and labels it read-only; edit/create modes update the existing profile draft. Save profile persists activity and Cancel restores saved values. Optional boolean `active` on keyword records defaults to true when absent, preserving legacy matching. Inactive keywords retain their text and criteria in storage/backups and do not match.

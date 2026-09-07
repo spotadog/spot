@@ -541,7 +541,7 @@ try {
     const first = positive.locator('.keyword-row').first();
     const second = positive.locator('.keyword-row').nth(1);
     await first.getByRole('checkbox').check();
-    assert.equal(await second.getByRole('checkbox').isChecked(), false);
+    assert.equal(await second.getByRole('checkbox').isChecked(), true);
     await first.getByRole('button', { name: 'Edit', exact: true }).click();
     for (const [value, message] of [[' ', 'Enter a keyword or phrase.'], ['HOT DOG', 'already exists'], ['x'.repeat(121), 'under 121']]) {
       await first.getByRole('textbox').fill(value);

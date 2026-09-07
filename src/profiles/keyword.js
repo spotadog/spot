@@ -1,5 +1,10 @@
 import { MATCH_TYPES, validateCriterion } from '../matching/criteria.js';
 export const keywordText = keyword => typeof keyword === 'string' ? keyword : keyword?.text;
+export const keywordActive = keyword => keyword?.active !== false;
+export function withKeywordActivity(keyword, active) {
+  if (typeof keyword === 'string') return active ? keyword : { text: keyword, active };
+  return { ...keyword, ...(active && !Object.hasOwn(keyword, 'active') ? {} : { active }) };
+}
 export function keywordCriterion(keyword, kind = 'positive') {
   const c = keyword?.matchingCriteria;
   if (c == null) return null;

@@ -7,7 +7,7 @@ Spot a Dog helps you quickly scan webpages by highlighting words and phrases rel
 | Spot a Dog On/Off | Pause all page scanning and remove highlights without deleting profiles or changing their individual switches. Resume with your saved configuration. |
 | Popup | With sidebar mode off, the toolbar opens a popup with full profile/keyword management, AI review, and settings access. |
 | Sidebar / Side Panel | Enable **Use sidebar** for the same interface beside the webpage. The saved preference controls later toolbar openings across tabs and browser sessions. |
-| Keyword Profiles | Organize topics, subjects, categories, keyword types, or interests into named reusable profiles; create, edit, or delete them; add, select, edit, save and remove each keyword in its own row. |
+| Keyword Profiles | Organize topics, subjects, categories, keyword types, or interests into named reusable profiles; create, edit, or delete them; add, activate/deactivate, edit, save and remove each keyword in its own row. |
 | Positive Keywords | Highlight important or desirable words and multi-word phrases in a distinct positive color, initially yellow with an underline. |
 | Negative Keywords | Highlight negative words and phrases in red so they are easy to distinguish, including when no positive terms appear nearby. |
 | Keyword Match Criteria | Select and configure all [17 match types](keyword-match-criteria.md), including word/phrase operations, lengths, structural recognition and advanced regex, for positive or negative highlights. |
@@ -19,9 +19,9 @@ Spot a Dog helps you quickly scan webpages by highlighting words and phrases rel
 
 Manage profiles and keywords in either the popup or side panel, with no API key required. **Use sidebar** selects the display location and does not change your profiles or scanning state. Both views share your saved global and profile states and link to settings. Closing either view does not turn Spot a Dog off; use the global switch to stop scanning. You can manage configuration even while scanning is off. Save profile edits before closing the editor if you want to keep them.
 
-Choose a profile from the **Profile** dropdown to view its read-only details. Type in **Search keywords** to filter its positive and negative terms immediately. Selection remains available while viewing; choose **Edit** to change details or keywords. Switching profiles resets search and row selection, with confirmation before discarding changed drafts. Import/export actions live in **Profile backups** at the bottom.
+Choose a profile from the **Profile** dropdown to view its read-only details. Type in **Search keywords** to filter its positive and negative terms immediately. Disabled checkboxes show active/inactive status while viewing; choose **Edit** to change details, keyword activity or keyword text. Switching profiles resets search, with confirmation before discarding changed drafts. Import/export actions live in **Profile backups** at the bottom.
 
-While editing, use **Add Keyword** to enter one term, **Save keyword** to finish that row, and **Save profile** to apply changes. Each row has an independent selection checkbox, **Edit**, and confirmed **Remove** action. Blank or duplicate terms show an inline error.
+While editing, use **Add Keyword** to enter one term, **Save keyword** to finish that row, and **Save profile** to apply changes. Each row has an activity checkbox (checked = active, unchecked = inactive), **Edit**, and confirmed **Remove** action. Activity is editable in both create and edit modes and persists only with Save profile; Cancel restores the saved profile. Missing activity on legacy keywords defaults to active. Blank or duplicate terms show an inline error.
 
 For example, a profile named **AI Infrastructure** could contain positive terms `GPU`, `inference`, and `data center`, and negative terms `gaming` and `graphics settings`. The required behavior highlights positives in yellow and negatives in red. If the same characters match both kinds, red takes precedence. You can enable this profile alongside other interests or disable it independently.
 

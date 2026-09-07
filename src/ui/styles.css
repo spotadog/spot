@@ -39,7 +39,8 @@ button:disabled { cursor: wait; opacity: .55; }
 .keyword-list { min-width: 0; border: 0; padding: 0; margin: 18px 0; }
 .keyword-list legend { font-weight: 600; margin-bottom: 6px; }
 .keyword-row { border: 1px solid #b9c7bd; border-radius: 8px; padding: 12px; margin: 10px 0; }
-.keyword-row.selected { border-color: #246447; background: #edf5eb; }
+.keyword-row input[type=checkbox]:disabled { cursor: default; opacity: 1; }
+.keyword-activity { margin-left: auto; font-weight: 400; }
 .keyword-row span { overflow-wrap: anywhere; min-width: 0; }
 .keyword-row input[type=text] { margin-top: 10px; }
 .keyword-error { color: #a12d35; margin: 6px 0; }

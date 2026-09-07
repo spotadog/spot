@@ -1,10 +1,10 @@
-import { keywordText } from '../profiles/keyword.js';
+import { keywordText, keywordActive, withKeywordActivity } from '../profiles/keyword.js';
 import { MATCH_TYPES } from '../matching/criteria.js';
 import { criteriaEditor } from './criteria-editor.js';
 import { validateKeyword } from '../profiles/model.js';
 import { element, report } from './client.js';
 
-// Each row owns its value and selection; storage continues to use individual array items.
+// Each row owns its draft value and activity; storage continues to use individual array items.
 export function keywordEditor(container, title, onChange = () => {}) {
   const list = element('div', undefined, { className: 'keyword-rows' });
   const empty = element('p', 'No keywords yet. Choose Add Keyword to start.', { className: 'hint' });
@@ -21,7 +21,8 @@ export function keywordEditor(container, title, onChange = () => {}) {
     const label = element('label', undefined, { className: 'inline' });
     const selected = element('input', undefined, { type: 'checkbox' });
     const text = element('span');
-    label.append(selected, text);
+    const status = element('small', undefined, { className: 'keyword-activity' });
+    label.append(selected, text, status);
     const input = element('input', undefined, { type: 'text', ariaLabel: `${title} keyword`, placeholder: 'Enter one word or phrase' });
     const criteriaContainer = element('div');
     const criteria = criteriaEditor(criteriaContainer, onChange);
@@ -34,15 +35,18 @@ export function keywordEditor(container, title, onChange = () => {}) {
     const actions = element('div', undefined, { className: 'actions' });
     actions.append(edit, save, cancel, remove);
     row.append(label, input, criteriaContainer, error, actions);
-    const record = { value, row, editing: value === null, render };
+    const record = { value, active: keywordActive(value), row, editing: value === null, render };
     rows.push(record);
     function render() {
       text.textContent = keywordText(record.value) ?? 'New keyword';
       const criterion = record.value?.matchingCriteria;
       if (criterion) text.textContent += ` — ${MATCH_TYPES.find(d => d.type === criterion.type)?.label ?? criterion.type}${criterion.value !== undefined ? ` (${criterion.value})` : criterion.min !== undefined ? ` (${criterion.min}–${criterion.max})` : ''}`;
       criteriaContainer.hidden = !record.editing;
-      selected.ariaLabel = `Select ${keywordText(record.value) ?? 'new keyword'}`;
-      row.classList.toggle('selected', selected.checked);
+      selected.checked = record.active;
+      selected.disabled = !editable;
+      selected.ariaLabel = `${keywordText(record.value) ?? 'New keyword'} active`;
+      label.title = editable ? 'Checked keywords are active. Save profile to apply changes.' : 'Keyword status (read-only). Choose Edit to change activity.';
+      status.textContent = `${record.active ? 'Active' : 'Inactive'}${editable ? '' : ' (read-only)'}`;
       input.hidden = save.hidden = cancel.hidden = !record.editing;
       edit.hidden = !editable || record.editing;
       remove.hidden = !editable || record.value === null;
@@ -57,12 +61,18 @@ export function keywordEditor(container, title, onChange = () => {}) {
       update();
       (rows[Math.min(index, rows.length - 1)]?.row.querySelector('input') ?? add).focus();
     }
-    selected.addEventListener('change', () => row.classList.toggle('selected', selected.checked));
+    selected.addEventListener('change', () => {
+      if (!editable) { selected.checked = record.active; return; }
+      record.active = selected.checked;
+      if (record.value !== null) record.value = withKeywordActivity(record.value, record.active);
+      render();
+      onChange();
+    });
     input.addEventListener('input', onChange);
     edit.addEventListener('click', () => { record.editing = true; input.value = keywordText(record.value); criteria.load(record.value?.matchingCriteria); render(); input.focus(); row.scrollIntoView({ block: 'nearest' }); });
     save.addEventListener('click', () => {
       try {
-        record.value = validateKeyword(criteria.read() ? { text: input.value, matchingCriteria: criteria.read() } : input.value, rows.filter(item => item !== record && item.value !== null).map(item => item.value));
+        record.value = validateKeyword(withKeywordActivity(criteria.read() ? { text: input.value, matchingCriteria: criteria.read() } : input.value, record.active), rows.filter(item => item !== record && item.value !== null).map(item => item.value));
         record.editing = false;
         render();
         onChange();
