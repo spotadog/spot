@@ -1,3 +1,4 @@
+import { wireAutoScroll } from '../ui/auto-scroll.js';
 import { providers } from '../services/models.js';
 import { wordTabs } from '../ui/word-tabs.js';
 import { keywordEditor } from '../ui/keyword-editor.js';
@@ -273,3 +274,5 @@ $('#import-file').addEventListener('change', async () => {
     report(result.warning || `Imported ${result.count} profile(s). Highlights refreshed.`);
   } catch (error) { report(error); }
 });
+
+wireAutoScroll();

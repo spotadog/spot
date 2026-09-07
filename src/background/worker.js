@@ -1,9 +1,11 @@
+import { navigationService } from './navigation.js';
 import { fingerprintHistory } from '../storage/count-history.js';
 import { createStore, scanningState } from '../storage/store.js';
 import { makeProfile, mergeKeywords } from '../profiles/model.js';
 import { suggestKeywords } from '../services/ai.js';
 import { exportProfiles, parseImport, mergeProfiles } from '../profiles/transfer.js';
 const store = createStore();
+const navigate = navigationService();
 async function applyDisplay(sidebar) {
   // Global options intentionally omit tabId so every tab uses the saved mode.
   await chrome.sidePanel.setOptions({ path: 'sidepanel/index.html', enabled: sidebar });
@@ -56,6 +58,7 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 async function handle(message, sender) {
   await ready;
+  if (message.type.startsWith('scroll.')) return navigate(message, sender);
   if (message.type === 'counts.record') {
     if (sender.id !== chrome.runtime.id || !sender.tab || sender.frameId !== 0 || !/^https?:\/\//.test(sender.url ?? '')) throw new Error('Invalid count source.');
     if (typeof message.url !== 'string' || !/^https?:\/\//.test(message.url)) throw new Error('Invalid count page.');
@@ -138,7 +141,7 @@ async function handle(message, sender) {
   return savedProfileId ? { id: savedProfileId } : true;
 }
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
-  if (!message?.type || ['state.changed', 'ui.changed'].includes(message.type)) return;
+  if (!message?.type || ['state.changed', 'ui.changed', 'scroll.changed', 'scroll.ui.changed'].includes(message.type)) return;
   handle(message, sender).then(data => respond({ ok: true, data }), error => respond({ ok: false, error: error.message || 'Spot a Dog could not complete this action.' }));
   return true;
 });

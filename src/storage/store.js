@@ -75,3 +75,25 @@ export function createStore(area = chrome.storage.local) {
 export function scanningState(state) {
   return { enabled: state.enabled, tracking: state.preferences?.tracking === true, profiles: state.profiles.map(({ id, enabled, positiveKeywords, negativeKeywords, rules }) => ({ id, enabled, positiveKeywords, negativeKeywords, rules })) };
 }
+
+// Runtime records belong to a browser session, never storage.local or profile backups.
+export function createTabStore(area = chrome.storage.session) {
+  const key = id => `spotadog.scroll.v1.${id}`;
+  let queue = Promise.resolve();
+  const serialize = work => {
+    const next = queue.catch(() => {}).then(work); queue = next; return next;
+  };
+  return {
+    read(id) { return serialize(async () => (await area.get(key(id)))[key(id)]); },
+    update(id, change) { return serialize(async () => {
+      const state = await change((await area.get(key(id)))[key(id)]);
+      await area.set({ [key(id)]: state }); return state;
+    }); },
+    remove(id) { return serialize(() => area.remove(key(id))); },
+    prune(ids) { return serialize(async () => {
+      const keep = new Set(ids.map(key));
+      const stale = Object.keys(await area.get(null)).filter(k => k.startsWith('spotadog.scroll.v1.') && !keep.has(k));
+      if (stale.length) await area.remove(stale);
+    }); }
+  };
+}

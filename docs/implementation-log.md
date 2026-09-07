@@ -201,3 +201,12 @@ Prompt 002 is the repository's only publication workflow: current `main` branch,
 - Validation: existing README content is preserved, local README links resolve, prompt numbering is continuous through 023, and git diff --check passed. Documentation-only changes; extension tests were not rerun.
 - Publication: existing main branch, no new branch; fetched origin and confirmed no divergence. Use the existing SSH identity documented in prompt 002. GitHub CLI authentication remains invalid, so repository notes and the commit description provide the documented fallback for standalone comments.
 - Issues/next steps: no documentation blocker found. Review the rendered README on GitHub; independent reconstruction from the prompt history has not been tested.
+
+
+## Per-tab Auto Scroll and pagination — prompt 024
+
+- Request: optional tab-isolated scrolling, speed, pause/resume, automatic pagination and safe detail/Back/startup behavior. Full prompt was saved before implementation.
+- Changes: shared popup/sidebar controls, pure navigation state, document-scoped worker messaging, trusted session storage, and one disposable page controller. Conservative pagination includes below-fold/long-footer controls, loading grace, duplicate prevention and pending-action cancellation. Profiles, matching and AI behavior are unchanged.
+- Validation: npm run check passed 91 unit tests, build and automated MV3 browser checks, including actual automatic navigation, speed, paused detail/Back, tab switching, closed-tab cleanup and fresh browser cleanup. Exact prompt preservation and git diff --check passed. No manual/live-site testing. See prompt 024 for the intermediate test-click timing investigation.
+- Limits/next steps: document scrolling and recognized same-origin pagination; unusual controls/nested containers, unexpected redirects and slow loaders may require manual navigation or Resume. User to reload dist/ and verify representative live sites.
+- Publication: existing main, existing SSH identity, no new branch; origin fetched without divergence. Invalid GitHub CLI authentication requires the documented repository/commit review-note fallback.

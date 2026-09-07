@@ -1,3 +1,4 @@
+import { checkAutoScroll } from './auto-scroll.mjs';
 import { checkPopupLayout } from './popup-layout.mjs';
 import { checkNewProfileKeywords } from './new-profile-keywords.mjs';
 import { checkWordTabs } from './word-tabs.mjs';
@@ -658,6 +659,17 @@ try {
   await checkNewProfileKeywords(criteriaPanel, id, keywordWorker);
   await checkWordTabs(criteriaPanel, id);
   await checkPopupLayout(criteriaPanel, id);
+  await checkAutoScroll(context, criteriaPanel, `http://127.0.0.1:${server.address().port}`);
+  // A genuinely fresh browser context must not restore transient scrolling sessions.
+  await criteriaPanel.evaluate(async () => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    await chrome.storage.session.set({ [`spotadog.scroll.v1.${tab.id}`]: { enabled: true, paused: true, speed: 600, pending: { target: 'https://example.invalid/next' } } });
+  });
+  await context.close();
+  context = await launch();
+  const freshWorker = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker');
+  const sessions = await freshWorker.evaluate(async () => Object.entries(await chrome.storage.session.get(null)).filter(([key]) => key.startsWith('spotadog.scroll.v1.')).map(([, value]) => value));
+  assert.ok(sessions.every(state => !state.enabled && !state.pending));
   assert.deepEqual(errors, []);
   console.log('Browser checks passed: real MV3 loading, profile CRUD, matching/exclusions, dynamic content, toggles, settings, mocked AI review, safe rendering, popup, persistence across browser restart, profile transfers/failures, and repeated extension reloads.');
 } finally {

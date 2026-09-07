@@ -44,6 +44,7 @@ For manual acceptance, check the pinned icon at normal and high-DPI display scal
 
 - Multiple named profiles with stable IDs, enabled states, and creation/update timestamps.
 - Select profiles from a dropdown in the popup or side panel; view and search their keywords, then enable Edit to change details, toggle the profile, add/edit keywords, or remove keywords with confirmation.
+- Optional [Auto Scroll](docs/features.md#auto-scroll-and-automatic-pagination) per tab, with adjustable speed, Pause/Resume, infinite scrolling and supported automatic pagination. Tab sessions reset on browser restart.
 - Global pause removes highlights and disconnects scanning observers while preserving profiles.
 - Case-insensitive literal words and phrases, repeated matches, flexible whitespace, and Unicode-aware word boundaries.
 - [17 selectable keyword match criteria](docs/keyword-match-criteria.md): word/phrase operations, word lengths, numbers, URLs, email, hashtags, mentions and advanced regex in both editors.
@@ -103,7 +104,7 @@ This includes page URLs, scanned text, matching results, counts, and URL/context
 
 `src/storage/store.js` is the sole Chrome storage adapter. `chrome.storage.local` stores versioned profile/settings data under `spotadog.state` and optional provider keys separately under `spotadog.apiKey` (OpenAI) and `spotadog.anthropicApiKey` (Anthropic). Historical keyword counts use separate `spotadog.counts.v1.<SHA-256 URL>` records containing per-keyword hashed context multiplicities; see [count semantics and limits](docs/features.md#live-keyword-counts). No Chrome sync storage is used. Uninstalling the extension removes its local data.
 
-The worker restricts local storage to `TRUSTED_CONTEXTS`. Content scripts receive only enabled state and scanning profile fields through validated messages; they cannot read settings or the API key or invoke profile/settings mutations. Extension UI reads only whether a key exists, not its value. The key is persisted locally **without encryption**; this personal bring-your-own-key implementation is intended for a trusted browser profile, not for embedding a developer’s shared secret in a distributed extension.
+The worker restricts local storage to `TRUSTED_CONTEXTS`. Content scripts receive scanning configuration and their own tab’s Auto Scroll runtime state through validated messages; they cannot read settings or the API key or invoke profile/settings mutations. Extension UI reads only whether a key exists, not its value. The key is persisted locally **without encryption**; this personal bring-your-own-key implementation is intended for a trusted browser profile, not for embedding a developer’s shared secret in a distributed extension.
 
 Permissions are `storage`, `sidePanel`, `scripting`, HTTP/HTTPS host and content-script access for automatic scanning, and the OpenAI and Anthropic API hosts for explicit suggestion requests. These permissions enable local page access and the separate AI seed requests; they do not cause browsing data to be uploaded. See the [implementation privacy audit](docs/privacy-architecture.md) for the verified data paths and maintenance checks.
 
@@ -145,6 +146,7 @@ src/
   profiles/transfer.js     Versioned JSON import/export validation and ID merge
   storage/store.js         Versioned persistence and credential isolation
   matching/matcher.js      Pure typed matching and overlap resolution
+  navigation/              Per-tab scroll state, conservative pagination and page controller
   content/                 Page lifecycle, visibility filtering, mutation observer
   highlighting/            Non-destructive CSS highlight rendering
   services/ai.js           Provider dispatch for keyword suggestions
