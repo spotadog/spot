@@ -69,10 +69,10 @@ test('create allows inactive new keywords and keyword text edits retain activity
   assert.equal(checkbox(row).disabled, false);
   assert.equal(checkbox(row).checked, true);
   toggle(row, false);
-  row.children[1].value = 'dog';
+  row.children.find(n => n.tag === 'input' && n.type === 'text').value = 'dog';
   button(row, 'Save keyword').click();
   assert.deepEqual(f.editor.read(), [{ text: 'dog', active: false }]);
-  button(row, 'Edit').click(); row.children[1].value = 'cat'; button(row, 'Save keyword').click();
+  button(row, 'Edit').click(); row.children.find(n => n.tag === 'input' && n.type === 'text').value = 'cat'; button(row, 'Save keyword').click();
   assert.deepEqual(makeProfile({ name: 'New', positiveKeywords: f.editor.read() }).positiveKeywords, [{ text: 'cat', active: false }]);
 });
 test('activity persists through storage and backups, controls both match kinds, and preserves metadata', async () => {

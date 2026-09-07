@@ -48,5 +48,5 @@ export function createStore(area = chrome.storage.local) {
   };
 }
 export function scanningState(state) {
-  return { enabled: state.enabled, profiles: state.profiles.map(({ id, enabled, positiveKeywords, negativeKeywords, rules }) => ({ id, enabled, positiveKeywords, negativeKeywords, rules })) };
+  return { enabled: state.enabled, tracking: state.preferences?.tracking === true, profiles: state.profiles.map(({ id, enabled, positiveKeywords, negativeKeywords, rules }) => ({ id, enabled, positiveKeywords, negativeKeywords, rules })) };
 }

@@ -57,6 +57,33 @@ try {
   assert.deepEqual(await site.evaluate(() => [...CSS.highlights.get('spotadog-matches')].map(r => r.toString())), ['GPU', 'inference', 'data center', 'GPU']);
   assert.deepEqual(await site.evaluate(() => [...CSS.highlights.get('spotadog-negative')].map(r => r.toString())), ['gaming']);
   assert.equal(await site.locator('#positive').innerHTML(), 'GPU inference data center.');
+  // Optional live counts use the active page and never require a UI refresh.
+  assert.equal(await panel.getByLabel('Track keyword occurrences').isChecked(), false);
+  await panel.getByLabel('Track keyword occurrences').check();
+  await site.bringToFront();
+  const gpuCount = panel.locator('#positive .keyword-row').first().locator('.keyword-count');
+  await gpuCount.filter({ hasText: 'Unique in context: 2 · Repeated: 2' }).waitFor();
+  await site.evaluate(() => {
+    const p = document.createElement('p'); p.id = 'count-fixture';
+    p.textContent = 'GPU inference data center.'; document.body.append(p);
+  });
+  await gpuCount.filter({ hasText: 'Unique in context: 2 · Repeated: 3' }).waitFor();
+  await site.evaluate(() => {
+    document.querySelector('#count-fixture').textContent = 'GPU gpu';
+    history.pushState({}, '', '/count-route');
+  });
+  await gpuCount.filter({ hasText: 'Unique in context: 3 · Repeated: 4' }).waitFor();
+  const otherSite = await context.newPage();
+  await otherSite.goto(`http://127.0.0.1:${server.address().port}/other`);
+  await otherSite.bringToFront();
+  await gpuCount.filter({ hasText: 'Unique in context: 2 · Repeated: 2' }).waitFor();
+  await otherSite.close();
+  await site.bringToFront();
+  await gpuCount.filter({ hasText: 'Unique in context: 3 · Repeated: 4' }).waitFor();
+  await site.evaluate(() => document.querySelector('#count-fixture').remove());
+  await gpuCount.filter({ hasText: 'Unique in context: 2 · Repeated: 2' }).waitFor();
+  await panel.getByLabel('Track keyword occurrences').uncheck();
+  await gpuCount.waitFor({ state: 'hidden' });
   await site.evaluate(() => { const p = document.createElement('p'); p.id = 'dynamic'; p.textContent = 'CUDA GPU'; document.body.append(p); });
   await waitFor(site, () => CSS.highlights.get('spotadog-matches')?.size === 5);
   await site.evaluate(() => { document.querySelector('#later').hidden = false; });

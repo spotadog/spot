@@ -1,6 +1,7 @@
 import { providers } from '../services/models.js';
 import { keywordEditor } from '../ui/keyword-editor.js';
-import { editableKeywords } from '../profiles/keyword.js';
+import { countKey } from '../matching/counts.js';
+import { editableKeywords, keywordKey } from '../profiles/keyword.js';
 import { MAX_IMPORT_BYTES, parseImport } from '../profiles/transfer.js';
 import { request, element, report, action, subscribe, wireGlobal, wirePageStatus } from '../ui/client.js';
 const $ = selector => document.querySelector(selector);
@@ -18,6 +19,7 @@ function setEditMode(value) {
   $('#edit-profile').hidden = !editingId || value;
   positive.setEditable(value);
   negative.setEditable(value);
+  clearCounts();
   $('#edit-help').textContent = value
     ? 'Save each keyword, then choose Save profile to apply changes. Cancel returns to viewing.'
     : 'Checkboxes show keyword activity and are read-only. Choose Edit to make changes.';
@@ -40,6 +42,7 @@ function view(profile, editable = false) {
   $('#profile-select').value = editingId ?? '';
   setEditMode(editable);
   dirty = false;
+  refreshCounts();
 }
 function canLeave() {
   return !!state && !saving && (!dirty || confirm('Discard unsaved profile changes?'));
@@ -71,6 +74,8 @@ async function refresh() {
   state = latest;
   $('#global-enabled').checked = state.enabled;
   $('#sidebar-mode').checked = state.preferences.sidebar;
+  $('#tracking-enabled').checked = state.preferences.tracking === true;
+  configureCounts();
   $('#show-sidebar').hidden = !state.preferences.sidebar;
   $('#ai-model').textContent = `${providers[state.preferences.provider]?.name ?? 'Unsupported provider'} — ${state.preferences.model}`;
   if (state.hasApiKey) $('#configure-key').hidden = true;
@@ -94,6 +99,49 @@ async function refresh() {
   if (state.profiles.some(p => p.id === selected)) $('#ai-profile').value = selected;
   if (suggestionProfile && !state.profiles.some(p => p.id === suggestionProfile)) clearSuggestions();
 }
+let countTimer, countRevision = 0;
+function clearCounts() {
+  ++countRevision;
+  const enabled = state?.preferences.tracking === true && !editMode;
+  positive.setCounts(null, enabled); negative.setCounts(null, enabled);
+}
+async function refreshCounts() {
+  const revision = ++countRevision;
+  if (!state?.preferences.tracking || !state.enabled || editMode) { clearCounts(); return; }
+  const profile = state.profiles.find(p => p.id === editingId);
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const response = tab?.id ? await chrome.tabs.sendMessage(tab.id, { type: 'counts.get' }) : null;
+    if (revision !== countRevision) return;
+    for (const [kind, editor] of [['positive', positive], ['negative', negative]]) {
+      const values = response?.counts && profile ? Object.fromEntries(editableKeywords(profile, kind).map(keyword => [keywordKey(keyword), response.counts[countKey(profile.id, kind, keyword)]])) : null;
+      editor.setCounts(values, true);
+    }
+  } catch { if (revision === countRevision) clearCounts(); }
+}
+function configureCounts() {
+  clearInterval(countTimer);
+  countTimer = null;
+  clearCounts();
+  if (state.preferences.tracking && state.enabled) countTimer = setInterval(refreshCounts, 500);
+  refreshCounts();
+}
+function pageCountsChanged() { ++countRevision; clearCounts(); refreshCounts(); }
+chrome.tabs.onActivated.addListener(pageCountsChanged);
+chrome.tabs.onUpdated.addListener(pageCountsChanged);
+window.addEventListener('pagehide', () => {
+  ++countRevision;
+  clearInterval(countTimer);
+  chrome.tabs.onActivated.removeListener(pageCountsChanged);
+  chrome.tabs.onUpdated.removeListener(pageCountsChanged);
+});
+$('#tracking-enabled').addEventListener('change', async () => {
+  const toggle = $('#tracking-enabled');
+  toggle.disabled = true;
+  try { await request('tracking.set', { enabled: toggle.checked }); }
+  catch (error) { report(error); }
+  finally { toggle.disabled = false; await refresh().catch(report); }
+});
 function clearSuggestions() { $('#review').hidden = true; $('#suggestions').replaceChildren(); suggestionProfile = null; }
 let currentWindow;
 chrome.windows.getCurrent().then(win => { currentWindow = win.id; }).catch(report);

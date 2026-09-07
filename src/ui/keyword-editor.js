@@ -1,4 +1,4 @@
-import { keywordText, keywordActive, withKeywordActivity } from '../profiles/keyword.js';
+import { keywordKey, keywordText, keywordActive, withKeywordActivity } from '../profiles/keyword.js';
 import { MATCH_TYPES } from '../matching/criteria.js';
 import { criteriaEditor } from './criteria-editor.js';
 import { validateKeyword } from '../profiles/model.js';
@@ -22,6 +22,7 @@ export function keywordEditor(container, title, onChange = () => {}) {
     const selected = element('input', undefined, { type: 'checkbox' });
     const text = element('span');
     const status = element('small', undefined, { className: 'keyword-activity' });
+    const count = element('small', '', { className: 'keyword-count', hidden: true });
     label.append(selected, text, status);
     const input = element('input', undefined, { type: 'text', ariaLabel: `${title} keyword`, placeholder: 'Enter one word or phrase' });
     const criteriaContainer = element('div');
@@ -34,8 +35,8 @@ export function keywordEditor(container, title, onChange = () => {}) {
     const remove = element('button', 'Remove', { type: 'button', className: 'danger' });
     const actions = element('div', undefined, { className: 'actions' });
     actions.append(edit, save, cancel, remove);
-    row.append(label, input, criteriaContainer, error, actions);
-    const record = { value, active: keywordActive(value), row, editing: value === null, render };
+    row.append(label, count, input, criteriaContainer, error, actions);
+    const record = { value, count, active: keywordActive(value), row, editing: value === null, render };
     rows.push(record);
     function render() {
       text.textContent = keywordText(record.value) ?? 'New keyword';
@@ -98,6 +99,13 @@ export function keywordEditor(container, title, onChange = () => {}) {
   add.addEventListener('click', () => { if (editable) { append(); onChange(); } });
   container.append(list, empty, add);
   return {
+    setCounts(values, enabled) {
+      for (const row of rows) {
+        row.count.hidden = !enabled;
+        const total = row.value && values?.[keywordKey(row.value)];
+        row.count.textContent = total ? `Unique in context: ${total.unique} · Repeated: ${total.repeated}` : 'Counts unavailable';
+      }
+    },
     setEditable(value) { editable = value; rows.forEach(item => item.render()); update(); },
     filter(value) { query = value.toLowerCase(); update(); },
     load(values = []) { rows = []; list.replaceChildren(); values.forEach(append); update(); },

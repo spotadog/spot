@@ -9,6 +9,7 @@ function update(state) {
   catch { scanner.stop(); return { ok: false }; }
 }
 const listener = (message, sender, respond) => {
+  if (message?.type === 'counts.get') { respond({ counts: scanner.snapshot() }); return; }
   if (message?.type === 'page.status') { respond({ supported: true }); return; }
   if (message?.type === 'state.changed') { receivedUpdate = true; respond(update(message.state)); }
 };

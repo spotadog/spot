@@ -41,6 +41,7 @@ For manual acceptance, check the pinned icon at normal and high-DPI display scal
 - Global pause removes highlights and disconnects scanning observers while preserving profiles.
 - Case-insensitive literal words and phrases, repeated matches, flexible whitespace, and Unicode-aware word boundaries.
 - [17 selectable keyword match criteria](docs/keyword-match-criteria.md): word/phrase operations, word lengths, numbers, URLs, email, hashtags, mentions and advanced regex in both editors.
+- Optional [live keyword counts](docs/features.md#live-keyword-counts) beside saved keyword rows, with separate repeated and normalized text-context totals.
 - Dynamic content, text edits, and common visibility attribute changes trigger a throttled rescan.
 - Full profile management and AI review in both popup and side panel; **Use sidebar** persists your preferred display location; separate settings page for optional API configuration.
 - User-reviewed OpenAI or Anthropic Claude suggestions can be added to either positive or negative keyword lists.

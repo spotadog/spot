@@ -51,3 +51,5 @@ button:disabled { cursor: wait; opacity: .55; }
 #profiles { margin-bottom: 14px; }
 #editor-title { overflow-wrap: anywhere; }
 input[readonly] { background: #f6f7f3; }
+
+.keyword-count { display: block; margin-top: 6px; font-variant-numeric: tabular-nums; }

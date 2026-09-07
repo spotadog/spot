@@ -1,6 +1,6 @@
 import { keywordText, keywordCriterion, keywordKey } from './keyword.js';
 import { validateCriteria } from '../matching/criteria.js';
-export const DEFAULT_PREFERENCES = { model: 'gpt-4o-mini', sidebar: false };
+export const DEFAULT_PREFERENCES = { model: 'gpt-4o-mini', sidebar: false, tracking: false };
 export function normalizeKeywords(value) {
   const items = typeof value === 'string' ? value.split(/\r?\n/) : value;
   if (!Array.isArray(items) || items.length > 200) throw new Error('Use at most 200 keywords per list.');

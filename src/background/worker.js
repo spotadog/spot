@@ -94,6 +94,9 @@ async function handle(message, sender) {
   let savedProfileId;
   await store.update(s => {
     switch (message.type) {
+      case 'tracking.set':
+        if (typeof message.enabled !== 'boolean') throw new Error('Invalid tracking preference.');
+        return { ...s, preferences: { ...s.preferences, tracking: message.enabled } };
       case 'global.set':
         if (typeof message.enabled !== 'boolean') throw new Error('Invalid enabled state.');
         return { ...s, enabled: message.enabled };

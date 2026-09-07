@@ -111,11 +111,7 @@ export function findMatches(text, profiles) {
     for (const [kind, keywords] of [['positive', profile.positiveKeywords], ['negative', profile.negativeKeywords]]) {
       for (const keyword of keywords) {
         if (!keywordActive(keyword)) continue;
-        let hits;
-        try {
-          const criterion = keywordCriterion(keyword, kind);
-          hits = criterion ? criterionOccurrences(text, criterion) : occurrences(text, keywordText(keyword));
-        } catch { continue; }
+        const hits = keywordOccurrences(text, keyword, kind);
         for (const hit of hits) matches.set(`${kind}:${hit.start}:${hit.end}`, { ...hit, kind });
       }
     }
@@ -140,4 +136,13 @@ export function resolveHighlights(matches) {
     }
     return pieces;
   });
+}
+
+// Shared by highlighting and counts; preserve all existing criterion semantics.
+export function keywordOccurrences(text, keyword, kind = 'positive') {
+  if (!keywordActive(keyword) || !keywordText(keyword)) return [];
+  try {
+    const criterion = keywordCriterion(keyword, kind);
+    return criterion ? criterionOccurrences(text, criterion) : occurrences(text, keywordText(keyword));
+  } catch { return []; }
 }
