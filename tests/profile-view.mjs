@@ -22,7 +22,11 @@ export async function checkProfileView(page, id) {
     const rows = page.locator('#positive .keyword-row:visible');
     await search.fill('DO');
     assert.deepEqual(await rows.locator('span').allTextContents(), ['Dog', 'hot dog']);
+    assert.equal(await page.locator('#negative .keyword-row:visible').count(), 0);
+    await page.getByRole('tab', { name: 'Negative Words' }).click();
     assert.equal(await page.locator('#negative .keyword-row:visible').count(), 1);
+    assert.equal(await rows.count(), 0);
+    await page.getByRole('tab', { name: 'Positive Words' }).click();
     assert.equal(await rows.first().getByRole('checkbox').isChecked(), true);
     assert.equal(await rows.first().getByRole('checkbox').isEnabled(), false);
     assert.equal(await rows.first().getByRole('button', { name: 'Edit', exact: true }).isVisible(), false);

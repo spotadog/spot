@@ -5,7 +5,7 @@ import { validateKeyword } from '../profiles/model.js';
 import { element, report } from './client.js';
 
 // Each row owns its draft value and activity; storage continues to use individual array items.
-export function keywordEditor(container, title, onChange = () => {}) {
+export function keywordEditor(container, title, onChange = () => {}, reveal = () => {}) {
   const list = element('div', undefined, { className: 'keyword-rows' });
   const empty = element('p', 'No keywords yet. Choose Add Keyword to start.', { className: 'hint' });
   const add = element('button', 'Add Keyword', { type: 'button' });
@@ -112,6 +112,7 @@ export function keywordEditor(container, title, onChange = () => {}) {
     read() {
       const pending = rows.find(item => item.editing);
       if (pending) {
+        reveal();
         pending.row.querySelector('input[type=text]').focus();
         throw new Error(`Save keyword or cancel the open ${title.toLowerCase()} keyword edit before saving the profile.`);
       }

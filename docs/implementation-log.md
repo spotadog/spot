@@ -150,3 +150,11 @@ Prompt 002 is the repository's only publication workflow: current `main` branch,
 - Documented counting semantics, scope, live behavior and limitations in features.md; complete implementation/review notes are in prompt 015.
 - Final npm run check passed 71 unit tests, build and automated MV3 checks including live counts, dynamic changes, client-side navigation and tab switching. No manual browser testing or live AI calls.
 - Publication follows prompt 002: current main, existing SSH identity, no new branch. GitHub CLI credentials are invalid; review notes are retained in the prompt and commit description. Next: user-run live Chrome verification; incremental visibility reconciliation remains a possible performance follow-up.
+
+## Positive and negative word tabs — prompt 016
+
+- Request: accessible in-place Positive Words / Negative Words tabs and removal of internal word-list scrolling. Complete prompt saved before implementation.
+- Changes: shared popup/sidebar tab controls retain both editors and drafts; keyboard navigation and active state use existing styles. Selected lists expand naturally. Pending edit validation reveals the appropriate tab before focusing its input. Storage, matching, AI and profile data formats remain unchanged.
+- Validation: npm run check passed all 71 unit tests, build and the full automated MV3 suite, including new two-surface tab, focus, data preservation and 200-row layout checks at 320/680px. git diff --check passed. Fixed a new test fixture to read full saved data after receiving the profile ID. No manual/live browser testing was performed.
+- Publication: current main branch, existing SSH identity, no new branch; origin fetched with no divergence. CLI authentication remains invalid, so this log, prompt notes and commit description provide the documented review-note fallback.
+- Issues/next steps: no known implementation blockers; user to verify live Chrome behavior and page scrolling.

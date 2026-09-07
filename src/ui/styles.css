@@ -37,7 +37,9 @@ button:disabled { cursor: wait; opacity: .55; }
 .criterion legend { padding: 0 4px; font-weight: 600; }
 
 .keyword-list { min-width: 0; border: 0; padding: 0; margin: 18px 0; }
-.keyword-list legend { font-weight: 600; margin-bottom: 6px; }
+.word-tabs { display: flex; gap: 8px; margin-top: 18px; }
+.word-tabs button { flex: 1; min-width: 0; }
+.word-tabs [aria-selected=true] { background: #246447; color: white; border-color: #246447; }
 .keyword-row { border: 1px solid #b9c7bd; border-radius: 8px; padding: 12px; margin: 10px 0; }
 .keyword-row input[type=checkbox]:disabled { cursor: default; opacity: 1; }
 .keyword-activity { margin-left: auto; font-weight: 400; }
@@ -46,7 +48,7 @@ button:disabled { cursor: wait; opacity: .55; }
 .keyword-error { color: #a12d35; margin: 6px 0; }
 .keyword-error:empty { display: none; }
 
-.keyword-rows { max-height: 380px; overflow-y: auto; padding: 4px; }
+.keyword-rows { padding: 4px; }
 
 #profiles { margin-bottom: 14px; }
 #editor-title { overflow-wrap: anywhere; }

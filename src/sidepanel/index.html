@@ -13,8 +13,12 @@
 <label for="name">Profile name</label><input id="name" required maxlength="80" placeholder="e.g. AI Infrastructure">
 <p id="edit-help" class="hint">Select a keyword to inspect it. Choose Edit to make changes.</p>
 <label for="keyword-search">Search keywords</label><input id="keyword-search" type="search" placeholder="Filter this profile’s keywords">
-<fieldset class="keyword-list"><legend>Positive keywords</legend><small>Highlighted in yellow with an underline.</small><div id="positive"></div></fieldset>
-<fieldset class="keyword-list"><legend>Negative keywords</legend><small>Highlighted in red. Red takes precedence where terms overlap.</small><div id="negative"></div></fieldset>
+<div class="word-tabs" role="tablist" aria-label="Word lists">
+<button type="button" id="positive-tab" role="tab" aria-selected="true" aria-controls="positive-panel" tabindex="0">Positive Words</button>
+<button type="button" id="negative-tab" role="tab" aria-selected="false" aria-controls="negative-panel" tabindex="-1">Negative Words</button>
+</div>
+<div id="positive-panel" class="keyword-list" role="tabpanel" aria-labelledby="positive-tab" tabindex="0"><small>Highlighted in yellow with an underline.</small><div id="positive"></div></div>
+<div id="negative-panel" class="keyword-list" role="tabpanel" aria-labelledby="negative-tab" tabindex="0" hidden><small>Highlighted in red. Red takes precedence where terms overlap.</small><div id="negative"></div></div>
 <label class="inline"><input id="profile-enabled" type="checkbox" checked> Profile enabled</label>
 <div id="save-actions" class="actions"><button type="submit" class="primary">Save profile</button><button type="button" id="cancel-edit">Cancel</button></div></form></section>
 <section><h2>Discover related keywords</h2><p id="ai-model" class="hint"></p><p class="hint">Send seed keywords to your selected AI provider, review suggestions, then choose which to add. API usage may incur charges.</p>

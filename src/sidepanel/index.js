@@ -1,4 +1,5 @@
 import { providers } from '../services/models.js';
+import { wordTabs } from '../ui/word-tabs.js';
 import { keywordEditor } from '../ui/keyword-editor.js';
 import { countKey } from '../matching/counts.js';
 import { editableKeywords, keywordKey } from '../profiles/keyword.js';
@@ -7,8 +8,9 @@ import { request, element, report, action, subscribe, wireGlobal, wirePageStatus
 const $ = selector => document.querySelector(selector);
 if (location.pathname.startsWith('/popup/')) document.body.classList.add('popup');
 const markDirty = () => { dirty = true; };
-const positive = keywordEditor($('#positive'), 'Positive', markDirty);
-const negative = keywordEditor($('#negative'), 'Negative', markDirty);
+const tabs = wordTabs($('.word-tabs'));
+const positive = keywordEditor($('#positive'), 'Positive', markDirty, () => tabs.select('positive-tab'));
+const negative = keywordEditor($('#negative'), 'Negative', markDirty, () => tabs.select('negative-tab'));
 let state, editingId = null, suggestionProfile = null;
 let editMode = false, dirty = false, saving = false, loadedProfile = null, refreshRevision = 0;
 function setEditMode(value) {
@@ -25,6 +27,7 @@ function setEditMode(value) {
     : 'Checkboxes show keyword activity and are read-only. Choose Edit to make changes.';
 }
 function view(profile, editable = false) {
+  if (editingId !== (profile?.id ?? null) || !profile) tabs.select('positive-tab');
   editingId = profile?.id ?? null;
   loadedProfile = JSON.stringify(profile ?? null);
   $('#editor-title').textContent = profile?.name ?? 'New profile';

@@ -1,3 +1,4 @@
+import { checkWordTabs } from './word-tabs.mjs';
 import { checkProfileView } from './profile-view.mjs';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
@@ -16,6 +17,7 @@ let context;
 const launch = () => chromium.launchPersistentContext(profileDir, { channel: 'chromium', headless: true, args: [`--disable-extensions-except=${resolve('dist')}`, `--load-extension=${resolve('dist')}`] });
 async function waitFor(page, fn) { await page.waitForFunction(fn); }
 async function addKeyword(page, kind, value) {
+  await page.locator(`#${kind}-tab`).click();
   const list = page.locator(`#${kind}`);
   await list.getByRole('button', { name: 'Add Keyword', exact: true }).click();
   const row = list.locator('.keyword-row').last();
@@ -23,6 +25,7 @@ async function addKeyword(page, kind, value) {
   await row.getByRole('button', { name: 'Save keyword', exact: true }).click();
 }
 async function clearKeywords(page, kind) {
+  await page.locator(`#${kind}-tab`).click();
   const remove = page.locator(`#${kind}`).getByRole('button', { name: 'Remove', exact: true });
   while (await remove.count()) {
     page.once('dialog', dialog => dialog.accept());
@@ -61,6 +64,7 @@ try {
   assert.equal(await panel.getByLabel('Track keyword occurrences').isChecked(), false);
   await panel.getByLabel('Track keyword occurrences').check();
   await site.bringToFront();
+  await panel.locator('#positive-tab').click();
   const gpuCount = panel.locator('#positive .keyword-row').first().locator('.keyword-count');
   await gpuCount.filter({ hasText: 'Unique in context: 2 · Repeated: 2' }).waitFor();
   await site.evaluate(() => {
@@ -476,6 +480,7 @@ try {
     await criteriaPanel.getByRole('button', { name: 'Edit', exact: true }).click();
     await clearKeywords(criteriaPanel, 'positive');
     await clearKeywords(criteriaPanel, 'negative');
+    await criteriaPanel.locator('#positive-tab').click();
     await criteriaPanel.locator('#positive').getByRole('button', { name: 'Add Keyword', exact: true }).click();
     assert.equal(await criteriaPanel.getByLabel('Keyword matching criteria', { exact: true }).locator('option').count(), 18);
     await criteriaPanel.getByLabel('Keyword matching criteria', { exact: true }).selectOption(type);
@@ -582,6 +587,7 @@ try {
     await first.getByRole('button', { name: 'Save keyword' }).click();
     assert.equal(await first.getByRole('checkbox').isChecked(), true);
     await addKeyword(criteriaPanel, 'negative', 'cat'); // Duplicates across colors remain allowed.
+    await criteriaPanel.locator('#positive-tab').click();
     await positive.getByRole('button', { name: 'Add Keyword', exact: true }).click();
     await positive.locator('.keyword-row').last().getByRole('button', { name: 'Cancel', exact: true }).click();
     await criteriaPanel.screenshot({ path: `test-results/individual-keywords-${surface}.png`, fullPage: true });
@@ -640,6 +646,7 @@ try {
   await criteriaPanel.getByText('Profile saved.', { exact: true }).waitFor();
   assert.deepEqual(await criteriaPanel.evaluate(async () => (await chrome.runtime.sendMessage({ type: 'state.get' })).data.profiles[0].positiveKeywords), [...many.slice(0, -1), 'replacement']);
   await checkProfileView(criteriaPanel, id);
+  await checkWordTabs(criteriaPanel, id);
   assert.deepEqual(errors, []);
   console.log('Browser checks passed: real MV3 loading, profile CRUD, matching/exclusions, dynamic content, toggles, settings, mocked AI review, safe rendering, popup, persistence across browser restart, profile transfers/failures, and repeated extension reloads.');
 } finally {
