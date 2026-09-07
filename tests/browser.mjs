@@ -20,13 +20,19 @@ try {
   const id = new URL(worker.url()).host;
   const panel = await context.newPage();
   panel.on('pageerror', e => errors.push(e.message));
-  await panel.goto(`chrome-extension://${id}/sidepanel/index.html`);
+  await panel.goto(`chrome-extension://${id}/popup/index.html`);
   await panel.getByRole('button', { name: 'New profile' }).click();
   await panel.getByLabel('Profile name').fill('AI Infrastructure');
   await panel.getByLabel('Positive keywords', { exact: true }).fill('GPU\ninference\ndata center');
   await panel.getByLabel('Negative keywords', { exact: true }).fill('gaming');
   await panel.getByRole('button', { name: 'Save profile' }).click();
   await panel.getByText('Profile saved.', { exact: true }).waitFor();
+  assert.equal(await panel.getByLabel('Use sidebar').isChecked(), false);
+  await panel.getByLabel('Seed keywords').fill('GPU');
+  await panel.getByRole('button', { name: 'Get suggestions' }).click();
+  await panel.locator('#status').filter({ hasText: 'AI keyword suggestions require an OpenAI API key' }).waitFor();
+  assert.equal(await panel.getByRole('button', { name: 'Configure API key' }).isVisible(), true);
+  assert.equal((await panel.evaluate(async () => (await chrome.runtime.sendMessage({ type: 'state.get' })).data)).hasApiKey, false);
   const site = await context.newPage();
   await site.goto(`http://127.0.0.1:${server.address().port}`);
   await waitFor(site, () => CSS.highlights.get('spotadog-matches')?.size === 4);
@@ -153,7 +159,7 @@ try {
   assert.equal(JSON.stringify(access.publicState).includes('test-placeholder'), false);
   const popup = await context.newPage();
   await popup.goto(`chrome-extension://${id}/popup/index.html`);
-  await popup.getByText('1 active profiles', { exact: true }).waitFor();
+  await popup.getByLabel('AI Infrastructure', { exact: true }).waitFor();
   await popup.getByLabel('Highlight pages').uncheck();
   await panel.waitForFunction(() => !document.querySelector('#global-enabled').checked);
   await waitFor(site, () => CSS.highlights.size === 0);
@@ -177,6 +183,47 @@ try {
   await panel.locator('#page-status').filter({ hasText: 'Highlighting is unavailable on this page.' }).waitFor();
   assert.equal((await getState()).enabled, true);
   await options.screenshot({ path: 'test-results/settings.png', fullPage: true });
+  // Real Chrome API configuration: global mode applies to current and new tabs.
+  const beforeMode = await getState();
+  await panel.getByLabel('Use sidebar').check();
+  await panel.waitForFunction(async () => (await chrome.runtime.sendMessage({ type: 'state.get' })).data.preferences.sidebar);
+  const routing = () => worker.evaluate(async () => ({
+    popup: await chrome.action.getPopup({}),
+    behavior: await chrome.sidePanel.getPanelBehavior(),
+    options: await chrome.sidePanel.getOptions({})
+  }));
+  await panel.waitForFunction(() => !document.querySelector('#sidebar-mode').disabled);
+  assert.equal(await panel.locator('#status').textContent(), 'Sidebar mode saved.');
+  assert.equal((await routing()).popup, '');
+  assert.equal((await routing()).behavior.openPanelOnActionClick, true);
+  assert.equal((await routing()).options.enabled, true);
+  const anotherTab = await context.newPage();
+  await anotherTab.goto(`chrome-extension://${id}/sidepanel/index.html`);
+  await anotherTab.getByLabel('Use sidebar').waitFor();
+  await anotherTab.waitForFunction(() => document.querySelector('#sidebar-mode').checked);
+  const perTab = await anotherTab.evaluate(async () => {
+    const tab = await chrome.tabs.getCurrent();
+    return { popup: await chrome.action.getPopup({ tabId: tab.id }), options: await chrome.sidePanel.getOptions({ tabId: tab.id }) };
+  });
+  assert.equal(perTab.popup, '');
+  assert.equal(perTab.options.enabled, true);
+  await anotherTab.getByLabel('Use sidebar').uncheck();
+  await anotherTab.waitForFunction(async () => !(await chrome.runtime.sendMessage({ type: 'state.get' })).data.preferences.sidebar);
+  assert.deepEqual(await getState(), beforeMode);
+  assert.equal((await routing()).popup, `chrome-extension://${id}/popup/index.html`);
+  assert.equal((await routing()).behavior.openPanelOnActionClick, false);
+  assert.equal((await routing()).options.enabled, false);
+  // Failure restores browser routing and leaves the saved preference unchanged.
+  await worker.evaluate(() => { globalThis.savedSet = chrome.storage.local.set; chrome.storage.local.set = async () => { throw new Error('Display storage failed'); }; });
+  const failedMode = await anotherTab.evaluate(() => chrome.runtime.sendMessage({ type: 'display.set', sidebar: true }));
+  assert.equal(failedMode.ok, false);
+  assert.equal((await routing()).popup, `chrome-extension://${id}/popup/index.html`);
+  assert.deepEqual(await getState(), beforeMode);
+  await worker.evaluate(() => { chrome.storage.local.set = globalThis.savedSet; });
+  const invalidMode = await anotherTab.evaluate(() => chrome.runtime.sendMessage({ type: 'display.set', sidebar: 'true' }));
+  assert.equal(invalidMode.ok, false);
+  await anotherTab.getByLabel('Use sidebar').check();
+  await anotherTab.waitForFunction(async () => (await chrome.runtime.sendMessage({ type: 'state.get' })).data.preferences.sidebar);
   await context.close();
   context = await launch();
   const restored = await context.newPage();
@@ -188,6 +235,10 @@ try {
   assert.equal(persisted.hasApiKey, true);
   assert.equal(persisted.enabled, true);
   assert.equal(persisted.preferences.model, 'test-model');
+  assert.equal(persisted.preferences.sidebar, true);
+  await restored.waitForFunction(async () => (await chrome.action.getPopup({})) === '' && (await chrome.sidePanel.getPanelBehavior()).openPanelOnActionClick);
+  await restored.getByLabel('Use sidebar').uncheck();
+  await restored.waitForFunction(async () => (await chrome.action.getPopup({})).endsWith('/popup/index.html'));
   const restoredOptions = await context.newPage();
   await restoredOptions.goto(`chrome-extension://${id}/options/index.html`);
   await restoredOptions.getByText('An API key is saved.', { exact: true }).waitFor();

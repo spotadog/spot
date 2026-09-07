@@ -20,16 +20,17 @@ Turning Spot a Dog off must preserve profiles, keyword lists, individual profile
 
 ## R2 — Popup and side panel
 
-The toolbar button must open the popup for quick interactions on the current webpage. A clearly labeled **Open side panel** button in the popup must open or focus the persistent browser side panel. The panel must support detailed profile and AI review work while the user continues browsing. Both interfaces must use the same saved application state and shared underlying controls and logic where practical.
+The toolbar button must respect the persisted **Use sidebar** preference. When off (the default), it opens the full popup interface. When on, it opens/focuses the global side panel across tabs and browser sessions. Chrome controls physical visibility and requires a user gesture to reopen a closed panel. Configuration must never depend on sidebar mode or an API key. These requirements supersede the earlier popup-only quick-controls design (prompt 006).
 
 | Capability | Popup | Side panel |
 | --- | --- | --- |
-| View and change global state | Required | Required |
-| View profiles and change individual enabled states | Required | Required |
+| View and change global/profile enabled states | Required | Required |
 | Open settings | Required | Required |
-| Open or focus side panel | Required button | Already in panel |
-| Create, edit, delete profiles and manage keyword lists | Access through side panel button | Required |
-| Generate, review, and approve AI suggestions | Access through side panel button | Required |
+| Persist display preference | Required | Required |
+| Create, edit, delete profiles and manage keyword lists | Required | Required |
+| Generate, review, and approve AI suggestions | Required; key needed only for generation | Required; key needed only for generation |
+
+Changing display mode must preserve profiles, keywords, settings, and credentials. Existing version-1 settings without a sidebar field must default to popup mode without replacing saved data. Missing-key errors must appear only when an AI feature is requested and offer access to API configuration.
 
 Changes saved in either interface must be reflected in other open interfaces. Interface-specific presentation must not duplicate matching, persistence, or AI request logic.
 

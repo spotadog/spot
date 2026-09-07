@@ -1,6 +1,7 @@
 <!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Spot a Dog — Profiles</title><link rel="stylesheet" href="../ui/styles.css"></head><body><main>
 <header><h1>Spot a Dog</h1><p class="subtitle">Your keywords. A clearer view.</p></header>
 <section><div class="row"><label class="inline"><input type="checkbox" id="global-enabled"> Highlight pages</label><button id="settings">Settings</button></div><p id="global-note" class="hint"></p></section>
+<section><label class="inline"><input type="checkbox" id="sidebar-mode"> Use sidebar</label><p class="hint">Choose where Spot a Dog opens. Profiles and keywords work in either view.</p><button id="show-sidebar" hidden>Show sidebar</button></section>
 <p id="page-status" class="hint" role="status"></p>
 <p id="status" role="status" aria-live="polite"></p>
 <div class="row"><h2>Keyword profiles</h2><button id="new-profile">New profile</button></div><div id="profiles"></div>
@@ -14,5 +15,6 @@
 <label for="ai-profile">Add suggestions to</label><select id="ai-profile"></select>
 <label for="seeds">Seed keywords</label><textarea id="seeds" placeholder="artificial intelligence"></textarea>
 <div class="actions"><button id="suggest" class="primary">Get suggestions</button></div>
+<button id="configure-key" hidden>Configure API key</button>
 <div id="review" hidden><p class="hint">Nothing is added until you select suggestions and click Add selected.</p><div id="suggestions"></div><label for="target">Keyword list</label><select id="target"><option value="positiveKeywords">Positive keywords</option><option value="negativeKeywords">Negative keywords</option></select><div class="actions"><button id="add-suggestions">Add selected</button><button id="dismiss-suggestions">Dismiss all</button></div></div></section>
 </main><script type="module" src="index.js"></script></body></html>

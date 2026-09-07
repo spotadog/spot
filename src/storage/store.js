@@ -1,4 +1,4 @@
-import { initialState } from '../profiles/model.js';
+import { initialState, DEFAULT_PREFERENCES } from '../profiles/model.js';
 const STATE = 'spotadog.state';
 const SECRET = 'spotadog.apiKey';
 // Only the service worker uses this adapter. Content scripts receive a public projection.
@@ -9,7 +9,7 @@ export function createStore(area = chrome.storage.local) {
     async read() {
       const saved = (await area.get(STATE))[STATE];
       if (saved && saved.schemaVersion !== 1) throw new Error('Unsupported storage version. Update Spot a Dog.');
-      return saved ?? initialState();
+      return saved ? { ...saved, preferences: { ...DEFAULT_PREFERENCES, ...saved.preferences } } : initialState();
     },
     update(change) {
       const next = queue.then(async () => {

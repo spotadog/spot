@@ -2,7 +2,29 @@ import { createStore, scanningState } from '../storage/store.js';
 import { makeProfile, mergeKeywords } from '../profiles/model.js';
 import { suggestKeywords } from '../services/openai.js';
 const store = createStore();
+async function applyDisplay(sidebar) {
+  // Global options intentionally omit tabId so every tab uses the saved mode.
+  await chrome.sidePanel.setOptions({ path: 'sidepanel/index.html', enabled: sidebar });
+  await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: sidebar });
+  await chrome.action.setPopup({ popup: sidebar ? '' : 'popup/index.html' });
+}
 const ready = store.init();
+let displayQueue = ready.then(async () => applyDisplay((await store.read()).preferences.sidebar));
+displayQueue.catch(console.error);
+function setDisplay(sidebar) {
+  const next = displayQueue.catch(() => {}).then(async () => {
+    const previous = (await store.read()).preferences.sidebar;
+    try {
+      await applyDisplay(sidebar);
+      return await store.update(s => ({ ...s, preferences: { ...s.preferences, sidebar } }));
+    } catch (error) {
+      await applyDisplay(previous).catch(console.error);
+      throw error;
+    }
+  });
+  displayQueue = next;
+  return next;
+}
 ready.catch(() => {});
 async function broadcast(state) {
   const message = { type: 'state.changed', state: scanningState(state) };
@@ -16,6 +38,12 @@ async function handle(message, sender) {
   const trusted = sender.id === chrome.runtime.id && sender.url?.startsWith(chrome.runtime.getURL(''));
   if (!trusted) throw new Error('This action is only available in Spot a Dog.');
   if (message.type === 'state.get') return { ...await store.read(), hasApiKey: Boolean(await store.getKey()) };
+  if (message.type === 'display.set') {
+    if (typeof message.sidebar !== 'boolean') throw new Error('Invalid sidebar preference.');
+    const state = await setDisplay(message.sidebar);
+    await broadcast(state);
+    return true;
+  }
   if (message.type === 'settings.save') {
     const model = message.model?.trim();
     if (!model || !/^[a-zA-Z0-9._:-]{1,100}$/.test(model)) throw new Error('Enter a valid model ID.');

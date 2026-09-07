@@ -1,5 +1,6 @@
 import { request, element, report, action, subscribe, wireGlobal, wirePageStatus } from '../ui/client.js';
 const $ = selector => document.querySelector(selector);
+if (location.pathname.startsWith('/popup/')) document.body.classList.add('popup');
 let state, editingId = null, suggestionProfile = null;
 function edit(profile) {
   editingId = profile?.id ?? null;
@@ -14,6 +15,9 @@ function edit(profile) {
 async function refresh() {
   state = await request('state.get');
   $('#global-enabled').checked = state.enabled;
+  $('#sidebar-mode').checked = state.preferences.sidebar;
+  $('#show-sidebar').hidden = !state.preferences.sidebar;
+  if (state.hasApiKey) $('#configure-key').hidden = true;
   $('#global-note').textContent = state.enabled ? 'Matching enabled profiles on supported web pages.' : 'Paused. Highlights are removed; profiles remain saved.';
   $('#profiles').replaceChildren();
   if (!state.profiles.length) $('#profiles').append(element('p', 'Start with a profile for a topic you care about.', { className: 'empty' }));
@@ -48,6 +52,25 @@ async function refresh() {
   if (suggestionProfile && !state.profiles.some(p => p.id === suggestionProfile)) clearSuggestions();
 }
 function clearSuggestions() { $('#review').hidden = true; $('#suggestions').replaceChildren(); suggestionProfile = null; }
+let currentWindow;
+chrome.windows.getCurrent().then(win => { currentWindow = win.id; }).catch(report);
+async function showSidebar() {
+  try { await chrome.sidePanel.open({ windowId: currentWindow }); }
+  catch { throw new Error('Sidebar preference saved. Click Show sidebar or the extension toolbar icon to open it.'); }
+}
+action($('#show-sidebar'), showSidebar);
+$('#sidebar-mode').addEventListener('change', async () => {
+  const toggle = $('#sidebar-mode');
+  const sidebar = toggle.checked;
+  toggle.disabled = true;
+  try {
+    await request('display.set', { sidebar });
+    report(sidebar ? 'Sidebar mode saved.' : 'Popup mode saved. Use the toolbar icon to open Spot a Dog.');
+    if (sidebar) await showSidebar();
+  } catch (error) { report(error); }
+  finally { toggle.disabled = false; await refresh().catch(report); }
+});
+action($('#configure-key'), () => chrome.runtime.openOptionsPage());
 action($('#new-profile'), () => edit());
 action($('#cancel-edit'), () => { $('#editor').hidden = true; });
 action($('#settings'), () => chrome.runtime.openOptionsPage());
@@ -68,6 +91,11 @@ action($('#suggest'), async () => {
   clearSuggestions();
   const id = $('#ai-profile').value;
   if (!id) throw new Error('Create a profile first.');
+  const latest = await request('state.get');
+  if (!latest.hasApiKey) {
+    $('#configure-key').hidden = false;
+    throw new Error('AI keyword suggestions require an OpenAI API key. Choose Configure API key. You can still manage profiles and keywords without one.');
+  }
   report('Requesting suggestions…');
   const suggestions = await request('ai.suggest', { seeds: $('#seeds').value });
   if ($('#ai-profile').value !== id || !state.profiles.some(p => p.id === id)) { report('Profile changed. Request suggestions again.'); return; }

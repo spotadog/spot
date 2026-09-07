@@ -14,9 +14,11 @@ npm run build
 1. Open `chrome://extensions` and enable **Developer mode**.
 2. Click **Load unpacked** and select this repository’s `dist/` directory.
 3. Pin **Spot a Dog** from Chrome’s extensions menu.
-4. Click its toolbar icon, then **Open side panel**.
+4. Click its toolbar icon to open the full profile editor. No API key is required.
 5. Click **New profile**, enter a name and keywords (one word or phrase per line), then **Save profile**.
 6. Visit an HTTP or HTTPS webpage. Positive matches appear in yellow with an underline; negative matches appear in red.
+
+The **Use sidebar** toggle saves a global display preference across tabs and browser sessions. Popup mode is the default for new and existing installations without a saved preference. Chrome controls panel visibility: a closed panel is reopened by a toolbar click, not forced open during navigation or startup. If Chrome declines the initial open gesture, **Show sidebar** retries directly; the preference remains saved.
 
 After rebuilding, click **Reload** on the extension card and refresh any already-open webpages. Keep loading from the same directory to retain the extension identity and storage. No runtime dependencies or remote scripts are used; esbuild bundles local JavaScript, and Playwright is used only for development tests.
 
@@ -27,11 +29,11 @@ After rebuilding, click **Reload** on the extension card and refresh any already
 ## Capabilities
 
 - Multiple named profiles with stable IDs, enabled states, and creation/update timestamps.
-- Create, edit, delete, and toggle profiles in the side panel; remove keywords by deleting their lines and saving.
+- Create, edit, delete, and toggle profiles in the popup or side panel; remove keywords by deleting their lines and saving.
 - Global pause removes highlights and disconnects scanning observers while preserving profiles.
 - Case-insensitive literal words and phrases, repeated matches, flexible whitespace, and Unicode-aware word boundaries.
 - Dynamic content, text edits, and common visibility attribute changes trigger a throttled rescan.
-- Popup for quick controls; side panel for profiles and AI review; separate settings page for API configuration.
+- Full profile management and AI review in both popup and side panel; **Use sidebar** persists your preferred display location; separate settings page for optional API configuration.
 - User-reviewed OpenAI suggestions can be added to either positive or negative keyword lists.
 - Local persistence across browser and extension restarts.
 
@@ -63,7 +65,7 @@ Permissions are `storage`, `sidePanel`, HTTP/HTTPS content-script access for aut
 
 Open **Settings** from the popup or side panel. Save your own API key and a Responses-compatible model ID (default `gpt-4o-mini`). Leave the key field blank to retain it; use **Remove API key** to delete it. Model access and API billing depend on your OpenAI account; a ChatGPT subscription does not supply API credit.
 
-In the side panel, select a profile, enter 1–20 seed keywords, and click **Get suggestions**. Only those seeds are sent to `https://api.openai.com/v1/responses`, on your explicit request. The dedicated `src/services/openai.js` service requests a strict JSON schema with `store: false` and a 25-second timeout. The authoritative `src/services/suggestion-contract.js` schema is included in both the instructions and strict response format on every request. It defines exactly `{ "suggestions": string[] }`: a required, non-null array with at most 30 candidates and no extra fields. The prompt targets 20 candidates; the 30-item validation ceiling preserves existing compatibility. The parser validates the wire structure against that schema before applying existing keyword normalization and the 120-character domain limit. It handles authentication/quota/network errors, refusals, malformed envelopes/JSON, schema violations, and incomplete responses without extracting JSON from prose or Markdown. Suggestions are validated, bounded, deduplicated, rendered as text, and never added automatically. Select the suggestions and target list, then click **Add selected**. Use each candidate’s **Dismiss** button or **Dismiss all** to discard review candidates without changing saved keywords. Closing the panel also discards unapproved review candidates.
+In either interface, select a profile, enter 1–20 seed keywords, and click **Get suggestions**. Only those seeds are sent to `https://api.openai.com/v1/responses`, on your explicit request. The dedicated `src/services/openai.js` service requests a strict JSON schema with `store: false` and a 25-second timeout. The authoritative `src/services/suggestion-contract.js` schema is included in both the instructions and strict response format on every request. It defines exactly `{ "suggestions": string[] }`: a required, non-null array with at most 30 candidates and no extra fields. The prompt targets 20 candidates; the 30-item validation ceiling preserves existing compatibility. The parser validates the wire structure against that schema before applying existing keyword normalization and the 120-character domain limit. It handles authentication/quota/network errors, refusals, malformed envelopes/JSON, schema violations, and incomplete responses without extracting JSON from prose or Markdown. Suggestions are validated, bounded, deduplicated, rendered as text, and never added automatically. Select the suggestions and target list, then click **Add selected**. Use each candidate’s **Dismiss** button or **Dismiss all** to discard review candidates without changing saved keywords. Closing the panel also discards unapproved review candidates.
 
 References used for the implementation: [OpenAI structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs), [Chrome side panel API](https://developer.chrome.com/docs/extensions/reference/api/sidePanel), and [Chrome storage access levels](https://developer.chrome.com/docs/extensions/reference/api/storage).
 
@@ -73,8 +75,8 @@ References used for the implementation: [OpenAI structured outputs](https://deve
 manifest.json              Extension configuration and permissions
 src/
   background/worker.js     Message authorization, serialized mutations, state broadcasts
-  popup/                   Compact global/profile controls and panel launcher
-  sidepanel/               Profile editor and AI suggestion review
+  popup/                   Popup entry point using the shared profile interface
+  sidepanel/               Shared profile editor, display toggle, and AI review
   options/                 API key and model preferences
   ui/                      Shared UI helpers and styles
   profiles/model.js        Profile schema and input validation
@@ -101,11 +103,13 @@ npx playwright install chromium
 npm run check
 ```
 
+`npm test` also verifies backward-compatible sidebar defaults. Browser checks exercise no-key popup profile editing, actionable missing-key handling, global/per-tab Chrome routing, display rollback on storage failure, and sidebar restoration across browser restart.
+
 `npm test` runs core model, literal matching, red overlap precedence, approval capacity/deduplication, storage concurrency/persistence and version rejection, and mocked API validation/error tests. `npm run test:browser` loads the actual unpacked MV3 extension in isolated Playwright Chromium, exercises profile CRUD, dynamic highlights and excluded elements, both highlight colors, negative-only profiles, shared enabled controls, settings, safe AI approval/dismissal and storage failures with a mocked network response, content-script access restrictions, popup rendering, and persistence after closing/reopening the browser. Screenshots go to ignored `test-results/`.
 
 A live OpenAI request requires your own configured key and is not made by the tests. Native Chrome panel docking and toolbar interaction should also be checked manually:
 
-1. Open the popup from the toolbar and click **Open side panel**. Keep the panel open while switching tabs.
+1. Open the popup from the toolbar with no key configured. Create/edit a profile and add/remove keywords. Enable **Use sidebar** and verify the panel opens. Close it, switch tabs, and click the toolbar icon: it should reopen in the sidebar. Disable **Use sidebar** and verify the next toolbar click opens the full popup with your data intact. Repeat after restarting Chrome.
 2. Create `AI Infrastructure` with positive `GPU`, `inference`, `data center`, and negative `gaming`.
 3. Confirm `GPU gaming` highlights GPU in yellow and gaming in red; check overlapping terms, negative-only profiles, and removal/reappearance with profile and global toggles.
 4. Configure a real API key, request suggestions, dismiss an unwanted candidate, and verify only selected suggestions are added to the chosen list.
