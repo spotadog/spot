@@ -32,6 +32,8 @@ function view(profile, editable = false) {
   loadedProfile = JSON.stringify(profile ?? null);
   $('#editor-title').textContent = profile?.name ?? 'New profile';
   $('#name').value = profile?.name ?? '';
+  // New profiles show the complete draft; a search must not hide newly saved rows.
+  $('#keyword-search-field').hidden = !profile;
   $('#keyword-search').value = '';
   positive.filter(''); negative.filter('');
   positive.load(editableKeywords(profile, 'positive'));

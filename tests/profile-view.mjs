@@ -74,11 +74,11 @@ export async function checkProfileView(page, id) {
     // A new profile remains selected after saving even when other profiles exist.
     await page.getByRole('button', { name: 'New profile', exact: true }).click();
     await page.getByLabel('Profile name').fill(`Created in ${surface}`);
-    await search.fill('no match');
+    assert.equal(await search.isVisible(), false);
     await page.locator('#positive').getByRole('button', { name: 'Add Keyword' }).click();
     await rows.first().getByRole('textbox').fill('new keyword');
     await rows.first().getByRole('button', { name: 'Save keyword' }).click();
-    await search.fill('');
+    assert.deepEqual(await rows.locator('span').allTextContents(), ['new keyword']);
     await rows.first().getByRole('checkbox').uncheck();
     await page.getByRole('button', { name: 'Save profile', exact: true }).click();
     await page.getByRole('heading', { name: `Created in ${surface}`, exact: true }).waitFor();

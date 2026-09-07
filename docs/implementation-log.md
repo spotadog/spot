@@ -167,3 +167,11 @@ Prompt 002 is the repository's only publication workflow: current `main` branch,
 - Validation: npm run check passed 76 unit tests, build and automated MV3 browser checks, including smaller batches, new/duplicate contexts, out-of-order replies/writes, failed writes and reload persistence. No manual browser testing.
 - Issues/next steps: previously discarded counts are unrecoverable; indistinguishable identical contexts in separate batches retain maximum multiplicity. User to verify representative live sites. Histories remain per exact URL and are subject to local-storage quota.
 - Publication: current main, no new branch, existing SSH identity; origin fetched without divergence. Invalid GitHub CLI authentication requires the documented repository/commit review-note fallback.
+
+## New-profile keyword visibility — prompt 018
+
+- Request: keep every added keyword visible before saving a new profile. Automated reproduction showed that active search hid nonmatching saved draft rows even though all keywords persisted.
+- Changes: new profiles reset search and omit its control until saved; each selected word tab displays its full draft list. Existing-profile search/editing and keyword persistence, validation and removal remain intact. Full request and implementation review are preserved in prompt 018.
+- Validation: npm run check passed 76 unit tests, build and the automated MV3 suite, including new popup/sidebar coverage for sequential/rapid additions, invalid/duplicate input, removal/re-addition, background updates, field edits, save failure/retry and complete persistence. Corrected a new test's expected length-error wording. No manual browser testing.
+- Publication: current main, no new branch, existing SSH identity; origin fetched without divergence. Invalid GitHub CLI authentication requires the documented repository/commit review-note fallback.
+- Next step: user to reload the extension and verify live creation. A separate reproduction will be needed if keywords disappear without search filtering; long lists continue to use normal page scrolling and only the selected word tab is shown.
