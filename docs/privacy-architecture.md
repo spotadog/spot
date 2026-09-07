@@ -1,0 +1,31 @@
+# Privacy architecture
+
+Spot a Dog uses local-only processing for the browsing information and page content it accesses. Scanning, matching, highlighting, and occurrence counting happen on the user's machine within the browser. That data, including URLs and derived matches, counts and fingerprints, is never uploaded, transmitted or shared with the plugin developer, third-party servers, AI providers or any other external party. The developer does not receive it. The [README privacy section](../README.md#storage-and-privacy) states the user-facing guarantee and distinguishes explicit AI seed submission.
+
+## Verified data paths
+
+The prompt 021 source/configuration audit found no browsing-data transmission path and required no runtime changes.
+
+| Boundary | Current implementation and data handling |
+| --- | --- |
+| Page access | `src/content/index.js` initializes `Scanner` in the extension's isolated content-script world. `src/content/scanner.js` reads rendered DOM text and the current URL, observes local mutations/navigation, and excludes the documented unsupported elements. No network request is involved. |
+| Matching and rendering | `src/matching/matcher.js`, `criteria.js` and `counts.js` evaluate text locally. URL/email criteria recognize text without contacting those addresses. `src/highlighting/highlighter.js` paints browser CSS highlight ranges without inserting webpage wrappers or remote resources. |
+| Count history | `src/content/count-history.js` sends the URL and normalized matching contexts through `chrome.runtime.sendMessage` to `src/background/worker.js`. This is communication within the browser. `src/storage/count-history.js` hashes both with local Web Crypto SHA-256; neither hashes nor counts are sent externally. |
+| Persistence | `src/storage/store.js` is the sole adapter and uses `chrome.storage.local` with `TRUSTED_CONTEXTS`, never sync storage. Count records retain hashed URLs/contexts and per-keyword multiplicities, not raw page URLs/text. Fingerprints are not encryption. Raw text/URLs exist transiently in scanner memory and local messages. History persists until extension data is cleared or the extension is uninstalled; see [count limits](features.md#live-keyword-counts). |
+| UI and message authorization | The worker returns scanning configuration without credentials. Count snapshots and tab availability checks use local Chrome messages. Content scripts cannot invoke `ai.suggest` or privileged settings/profile operations; those require this extension's UI origin. No external-message listener or webpage `postMessage` bridge is registered. |
+| External API requests | The only runtime network calls are in `src/services/openai.js` and `src/services/anthropic.js`, dispatched through `src/services/ai.js`. The shared UI sends only the seed field to `ai.suggest`; the worker adds the saved model/provider and credential. Request bodies contain normalized seeds, static instructions/schema and model/output configuration, with credentials in headers. No page URL, scanned text, match/count history, or profile is attached. |
+| Logging and errors | Worker lifecycle/display failures use the local developer console. UI failures use local status messages; count failures show unavailable. Provider adapters return controlled errors rather than exposing response bodies or credentials. There is no remote logging, crash-reporting endpoint, analytics, telemetry SDK or developer backend. |
+| Permissions and packaging | `manifest.json` requests `storage`, `sidePanel`, `scripting` and HTTP/HTTPS page access for local scanning/reinjection, plus provider hosts for explicit seed requests. Its extension-page CSP restricts connections to the two provider origins and scripts to packaged sources. Permissions/CSP alone do not prove payload privacy; the call paths above establish it. There is no browsing-history permission, sync mechanism or remote script. |
+| Dependencies and backups | `package.json` has no runtime dependencies; esbuild and Playwright are development tools. `scripts/build.mjs` bundles local sources/assets. Profile imports read a selected local JSON file; exports create a local Blob download. They contain saved profile configuration, not browsing/count history or credentials. The extension does not upload backups. |
+
+## Separate AI input and scope
+
+AI discovery is optional and unnecessary for matching. Only an explicit **Get suggestions** action sends user-entered seeds to the chosen provider. The extension does not collect seeds from pages or send browsing context with them. A user who manually copies page text into the seed field and submits it sends that text as AI input; the local-only scanning guarantee does not mean that this submitted input stays local. Provider requests also transmit authentication and model/request configuration. OpenAI's `store: false` is not a claim that provider requests are local.
+
+This guarantee describes Spot a Dog's data handling. It does not describe requests made by the visited website, other extensions/software, or user-managed file sharing/backups.
+
+## Maintaining the boundary
+
+When changing scanning, messaging, storage or services, trace page URLs, text and derived values to every consumer, including error paths. Keep them in the local scanner/worker/storage/UI flow. Do not add page-derived AI seeds, remote matching, telemetry payloads or synchronization of browsing data. Review new dependencies, remote resources and permissions as well as direct network calls. Keep optional AI submissions limited to their documented user-entered input.
+
+The audit reviewed runtime sources, manifest/CSP, dependencies/build configuration, user/developer documentation and relevant prompt history. Validation for this documentation-only change uses local Markdown target checks, prompt-preservation checks and `git diff --check`; the repository has no dedicated documentation lint or link-check script. No live/manual browser testing or provider requests were performed.

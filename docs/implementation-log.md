@@ -183,3 +183,13 @@ Prompt 002 is the repository's only publication workflow: current `main` branch,
 - Pre-change automated measurements confirmed a 600px body with 2158px overflowing content. Scrolling moves that overflow bottom into the viewport, explaining how native sizing could settle. Native toolbar oscillation was not reproduced in the tab-based harness; the remaining acceptance step is the user's Chrome check.
 - npm run check passed all 76 unit tests, build, and automated MV3 browser checks, including new short/long content and scroll-position layout regressions at 320/420/680px. The old CSS fails the regression. No manual/live testing performed.
 - Publication: main, existing SSH identity, no new branch. Invalid GitHub CLI authentication requires the documented repository/commit review-note fallback. See prompt 019 for investigation evidence, limitations, and next steps.
+
+
+## Local-only browsing privacy — prompt 021
+
+- Request: verify the implementation before documenting that browsing information/content stays local and is never sent to the developer or other external parties.
+- Audited scanning/matching/count data, local Chrome messages and storage, provider request inputs, logging/errors, permissions/CSP, dependencies/build and profile backups. No runtime change was necessary. The [privacy architecture audit](privacy-architecture.md) records the boundaries and source evidence.
+- Updated README, features, requirements and match-criteria guidance. Distinguished optional user-entered AI seeds from browsing data; manually copied text submitted as seeds is sent externally. Historical prompts/reviews remain unchanged.
+- Validation: 76 unit tests passed, 43 local Markdown file targets resolved, complete prompt preservation and git diff --check passed. No dedicated documentation validation script exists. No browser testing or live AI requests.
+- Publication: current main, existing SSH identity, no new branch; origin fetched. Invalid GitHub CLI authentication requires the documented repository/commit review-note fallback.
+- Issues/next steps: no runtime privacy conflict found; maintain the audited boundary when extending services, dependencies, permissions or persistence. User handles live browser verification separately.

@@ -83,6 +83,14 @@ AI-assisted discovery is provided through dedicated OpenAI and Anthropic API ada
 
 The current local key storage is unencrypted and assumes a trusted browser profile. Documentation and settings guidance must not describe it as encrypted or suitable for distributing a shared developer secret. Settings must explain local storage and the explicit external submission of seeds. See the [README storage and privacy details](../README.md#storage-and-privacy).
 
+## Local-only browsing privacy
+
+[Prompt 021](prompts/021-local-only-browsing-privacy.md) makes the browsing-data boundary explicit: all browsing information and page/content information accessed by the extension must remain on the user's machine, within the browser. Scanning, matching, highlighting and count processing must run locally, without transmitting this information or its derivatives (including URLs, matches, counts and fingerprints) to a server, the plugin developer, an AI provider or any other external party. The developer must not receive browsing data through logging, telemetry, error reporting, storage synchronization or another service.
+
+Chrome messages between content scripts, the extension worker and extension UI are local browser communication. Keep persistence behind the existing local storage adapter and matching independent of UI and AI services. Broad HTTP/HTTPS permissions authorize local scanning and reinjection, not browsing-data uploads.
+
+Preserve the separate, explicit AI seed-submission feature in R8–R9: user-entered seeds, model configuration, instructions and credentials go to the selected provider. Never derive seeds from pages or attach browsing information to that request. Documentation must explain that manually copying page text into the seed field and submitting it sends that text as AI input. The extension's guarantee covers its handling of browsing data, not unrelated website traffic or other software. Verify future changes against the [privacy architecture audit](privacy-architecture.md).
+
 ## R9 — AI-assisted keyword expansion
 
 Users must be able to enter one or more seed words or phrases and explicitly request related suggestions for a selected profile. Retain the current limit of 1–20 seeds per request. Suggestions may include synonyms, related terminology, common variations, associated concepts, relevant phrases, and alternative terms that appear on webpages; these examples are possibilities, not mandatory output categories.

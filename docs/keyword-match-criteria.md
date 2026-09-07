@@ -26,6 +26,8 @@ Word, phrase and regex criteria use the keyword text itself as the search value,
 
 For example, enter `\b(dog|cat)s?\b` as the keyword text and choose **Regex (Advanced)** to match `dog`, `dogs`, `cat` or `cats`.
 
+All match types evaluate page text locally within your browser. Browsed content and matching results are never sent to the developer or any external party for recognition or processing; see [privacy and data handling](../README.md#storage-and-privacy).
+
 ## Text and highlighting semantics
 
 - Each visible DOM text node is independent. Phrases and regex cannot cross inline elements or other text-node boundaries. Phrase anchors refer to the text node, not a sentence, paragraph or viewport.

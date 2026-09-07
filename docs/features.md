@@ -16,6 +16,12 @@ Spot a Dog helps you quickly scan webpages by highlighting words and phrases rel
 | AI Keyword Discovery | Enter seed words or phrases and ask an OpenAI or Anthropic model for synonyms, variations, associated concepts, and related terminology. |
 | Human Approval | Review candidates individually, select useful terms, reject or dismiss unwanted ones, choose the profile and positive or negative list, then explicitly add your selection. |
 
+## Privacy and data handling
+
+Browsing information and page content accessed by Spot a Dog stay on your machine, within your browser. Scanning, matching, highlighting and keyword counts are processed locally without sending browsing data, page URLs, content or derived counts/fingerprints to external servers. The plugin developer, third parties and other external parties do not receive this information. Local storage is not synchronized to a cloud service.
+
+Optional AI discovery sends only the seeds you explicitly submit as user content to your chosen provider, with its model configuration and authentication. Seeds are never populated from browsed pages. Text you manually copy into that field and submit is sent to the provider. See [Storage and privacy](../README.md#storage-and-privacy) for the full guarantee and [the architecture audit](privacy-architecture.md) for implementation evidence.
+
 ## Everyday use
 
 Manage profiles and keywords in either the popup or side panel, with no API key required. **Use sidebar** selects the display location and does not change your profiles or scanning state. Both views share your saved global and profile states and link to settings. Closing either view does not turn Spot a Dog off; use the global switch to stop scanning. You can manage configuration even while scanning is off. Save profile edits before closing the editor if you want to keep them.
@@ -26,7 +32,7 @@ While editing, use **Add Keyword** to enter one term, **Save keyword** to finish
 
 For example, a profile named **AI Infrastructure** could contain positive terms `GPU`, `inference`, and `data center`, and negative terms `gaming` and `graphics settings`. The required behavior highlights positives in yellow and negatives in red. If the same characters match both kinds, red takes precedence. You can enable this profile alongside other interests or disable it independently.
 
-Open **Settings** to save your own API key and model configuration. A blank key field retains the saved key; **Remove API key** deletes it. The key is stored locally, unencrypted, for use in a trusted browser profile. Only explicitly entered discovery seeds are sent to OpenAI or Anthropic; webpage text is not sent. No API key is needed to create profiles or highlight pages. See [credential requirements](requirements.md#r8--ai-configuration-and-credentials) for handling and privacy rules.
+Open **Settings** to save your own API key and model configuration. A blank key field retains the saved key; **Remove API key** deletes it. The key is stored locally, unencrypted, for use in a trusted browser profile. Only explicitly entered discovery seeds are sent as user content to OpenAI or Anthropic; scanned webpage text is never attached. No API key is needed to create profiles or highlight pages. See [credential requirements](requirements.md#r8--ai-configuration-and-credentials) for handling and privacy rules.
 
 To expand a profile, select its destination, enter seeds, and click **Get suggestions**. Review the results, select terms you want, choose the positive or negative list, and click **Add selected**. Generation alone never changes your profile. Adding terms while the profile or global switch is off stores them for later use without turning scanning on.
 
