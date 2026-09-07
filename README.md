@@ -20,6 +20,10 @@ npm run build
 
 After rebuilding, click **Reload** on the extension card and refresh any already-open webpages. Keep loading from the same directory to retain the extension identity and storage. No runtime dependencies or remote scripts are used; esbuild bundles local JavaScript, and Playwright is used only for development tests.
 
+## Product documentation
+
+[Product features](docs/features.md) and [functional requirements](docs/requirements.md) define the target behavior for future implementation. The requirements supersede the initial negative-keyword suppression policy: negative matches must be red and must not suppress separate positive matches. That change and an explicit AI suggestion dismiss/remove action are not yet implemented. The capabilities and matching details below describe the current extension.
+
 ## Capabilities
 
 - Multiple named profiles with stable IDs, enabled states, and creation/update timestamps.
@@ -81,6 +85,8 @@ src/
   services/openai.js       OpenAI request/response boundary
 scripts/build.mjs          Reproducible local bundle into dist/
 tests/                     Core unit tests and real-extension browser checks
+docs/features.md           Product feature guide (required experience)
+docs/requirements.md       Authoritative requirements and implementation gaps
 docs/prompts/              Append-only development prompt history
 docs/prompt-processing-flow.md
 AGENTS.md                  Project workflow instructions for future coding agents
