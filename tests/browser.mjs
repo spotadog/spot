@@ -1,3 +1,4 @@
+import { checkIndependentKeywordSaving } from './independent-keyword-saving.mjs';
 import { checkKeywordColors } from './keyword-colors.mjs';
 import { checkAutoScroll } from './auto-scroll.mjs';
 import { checkPopupLayout } from './popup-layout.mjs';
@@ -32,8 +33,11 @@ async function clearKeywords(page, kind) {
   await page.locator(`#${kind}-tab`).click();
   const remove = page.locator(`#${kind}`).getByRole('button', { name: 'Remove', exact: true });
   while (await remove.count()) {
+    const count = await remove.count();
     page.once('dialog', dialog => dialog.accept());
     await remove.first().click();
+    await page.waitForFunction(({ kind, count }) => document.querySelectorAll(`#${kind} .keyword-row`).length < count || [...document.querySelectorAll(`#${kind} .keyword-error`)].some(e => e.textContent), { kind, count });
+    assert.deepEqual(await page.locator(`#${kind} .keyword-error`).allTextContents(), Array(await page.locator(`#${kind} .keyword-error`).count()).fill(''));
   }
 }
 try {
@@ -119,7 +123,7 @@ try {
   await panel.getByRole('button', { name: 'Save profile' }).click();
   await panel.getByText('Profile saved.', { exact: true }).waitFor();
   await waitFor(site, () => CSS.highlights.get('spotadog-matches')?.size === 5);
-  await panel.getByRole('button', { name: 'Edit', exact: true }).click();
+  await panel.locator('#edit-profile').click();
   await clearKeywords(panel, 'positive');
   for (const term of ['GPU', 'CUDA']) await addKeyword(panel, 'positive', term);
   await panel.getByRole('button', { name: 'Save profile' }).click();
@@ -488,7 +492,7 @@ try {
     ['regex', '\\b(dog|cat)s?\\b', 'dogs cat DOG', ['dogs', 'cat']]
   ];
   for (const [type, value, text, expected] of samples) {
-    await criteriaPanel.getByRole('button', { name: 'Edit', exact: true }).click();
+    await criteriaPanel.locator('#edit-profile').click();
     await clearKeywords(criteriaPanel, 'positive');
     await clearKeywords(criteriaPanel, 'negative');
     await criteriaPanel.locator('#positive-tab').click();
@@ -514,7 +518,7 @@ try {
       throw new Error(`Criterion ${type}: expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`, { cause: error });
     }
   }
-  await criteriaPanel.getByRole('button', { name: 'Edit', exact: true }).click();
+  await criteriaPanel.locator('#edit-profile').click();
   await criteriaPanel.locator('#positive').getByRole('button', { name: 'Edit', exact: true }).click();
   assert.equal(await criteriaPanel.getByLabel('Keyword matching criteria', { exact: true }).inputValue(), 'regex');
   await criteriaPanel.getByLabel('Positive keyword', { exact: true }).fill('[');
@@ -537,7 +541,7 @@ try {
   assert.deepEqual(roundTrip.exported.profiles[0].positiveKeywords, [{ text: '[', matchingCriteria: { type: 'betweenLengths', min: 5, max: 10 } }]);
   assert.equal(roundTrip.imported.ok, true);
   await criteriaPanel.goto(`chrome-extension://${id}/sidepanel/index.html`);
-  await criteriaPanel.getByRole('button', { name: 'Edit', exact: true }).click();
+  await criteriaPanel.locator('#edit-profile').click();
   await criteriaPanel.locator('#positive').getByRole('button', { name: 'Edit', exact: true }).click();
   assert.equal(await criteriaPanel.getByLabel('Keyword matching criteria', { exact: true }).inputValue(), 'betweenLengths');
   assert.equal(await criteriaPanel.getByLabel('Minimum length').inputValue(), '5');
@@ -546,7 +550,7 @@ try {
   await criteriaPanel.getByText('Profile saved.', { exact: true }).waitFor();
   await waitFor(importPage, () => CSS.highlights.size === 0);
   // Mixed criteria remain attached to their own rows across edit, cancel and clearing.
-  await criteriaPanel.getByRole('button', { name: 'Edit', exact: true }).click();
+  await criteriaPanel.locator('#edit-profile').click();
   await addKeyword(criteriaPanel, 'positive', 'invoice');
   await criteriaPanel.locator('#positive').getByRole('button', { name: 'Add Keyword', exact: true }).click();
   await criteriaPanel.getByLabel('Positive keyword', { exact: true }).last().fill('urgent');
@@ -555,7 +559,7 @@ try {
   await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
   await criteriaPanel.getByText('Profile saved.', { exact: true }).waitFor();
   await criteriaPanel.reload();
-  await criteriaPanel.getByRole('button', { name: 'Edit', exact: true }).click();
+  await criteriaPanel.locator('#edit-profile').click();
   const urgentRow = criteriaPanel.locator('#positive .keyword-row').filter({ hasText: 'urgent' });
   await urgentRow.getByRole('button', { name: 'Edit', exact: true }).click();
   assert.equal(await urgentRow.getByLabel('Keyword matching criteria', { exact: true }).inputValue(), 'startsWith');
@@ -568,7 +572,7 @@ try {
   await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
   await criteriaPanel.getByText('Profile saved.', { exact: true }).waitFor();
   assert.deepEqual(await criteriaPanel.evaluate(async () => (await chrome.runtime.sendMessage({ type: 'state.get' })).data.profiles[0].positiveKeywords), ['invoice', 'urgent']);
-  await criteriaPanel.getByRole('button', { name: 'Edit', exact: true }).click();
+  await criteriaPanel.locator('#edit-profile').click();
   await clearKeywords(criteriaPanel, 'positive');
   await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
   await criteriaPanel.getByText('Profile saved.', { exact: true }).waitFor();
@@ -594,7 +598,9 @@ try {
     }
     await first.getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).fill('cat');
     await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
-    await criteriaPanel.locator('#status').filter({ hasText: 'Save keyword or cancel' }).waitFor();
+    await criteriaPanel.getByText('Profile saved.', { exact: true }).waitFor();
+    assert.equal(await first.getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).inputValue(), 'cat');
+    await criteriaPanel.locator('#edit-profile').click();
     await first.getByRole('button', { name: 'Save keyword' }).click();
     assert.equal(await first.getByRole('checkbox').isChecked(), true);
     await addKeyword(criteriaPanel, 'negative', 'cat'); // Duplicates across colors remain allowed.
@@ -615,6 +621,7 @@ try {
     assert.equal(await positive.locator('.keyword-row').count(), 2);
     criteriaPanel.once('dialog', dialog => dialog.accept());
     await positive.locator('.keyword-row').first().getByRole('button', { name: 'Remove' }).click();
+    await criteriaPanel.waitForFunction(() => document.querySelectorAll('#positive .keyword-row').length === 1);
     assert.deepEqual(await positive.locator('.keyword-row span').allTextContents(), ['hot dog']);
     await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
     await criteriaPanel.getByText('Profile saved.', { exact: true }).waitFor();
@@ -645,17 +652,17 @@ try {
   await last.getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).fill('replacement');
   await criteriaPanel.screenshot({ path: 'test-results/individual-keywords-many.png', fullPage: true });
   assert.equal(await criteriaPanel.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-  await last.getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).press('Enter');
   const keywordWorker = context.serviceWorkers()[0];
   await keywordWorker.evaluate(() => { globalThis.keywordOriginalSet = chrome.storage.local.set; chrome.storage.local.set = async () => { throw Error('simulated failure'); }; });
-  await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
-  await criteriaPanel.locator('#status').filter({ hasText: 'simulated failure' }).waitFor();
-  assert.equal(await last.locator('span').textContent(), 'replacement');
+  await last.getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).press('Enter');
+  await last.getByRole('alert').filter({ hasText: 'simulated failure' }).waitFor();
+  assert.equal(await last.getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).inputValue(), 'replacement');
   assert.deepEqual(await criteriaPanel.evaluate(async () => (await chrome.runtime.sendMessage({ type: 'state.get' })).data.profiles[0].positiveKeywords), many);
   await keywordWorker.evaluate(() => { chrome.storage.local.set = globalThis.keywordOriginalSet; });
-  await criteriaPanel.getByRole('button', { name: 'Save profile' }).click();
-  await criteriaPanel.getByText('Profile saved.', { exact: true }).waitFor();
+  await last.getByRole('button', { name: 'Save keyword' }).click();
+  await criteriaPanel.getByText('Keyword saved.', { exact: true }).waitFor();
   assert.deepEqual(await criteriaPanel.evaluate(async () => (await chrome.runtime.sendMessage({ type: 'state.get' })).data.profiles[0].positiveKeywords), [...many.slice(0, -1), 'replacement']);
+  await checkIndependentKeywordSaving(criteriaPanel, id);
   await checkProfileView(criteriaPanel, id);
   await checkNewProfileKeywords(criteriaPanel, id, keywordWorker);
   await checkWordTabs(criteriaPanel, id);

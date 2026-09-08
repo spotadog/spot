@@ -26,9 +26,9 @@ Optional AI discovery sends only the seeds you explicitly submit as user content
 
 Manage profiles and keywords in either the popup or side panel, with no API key required. **Use sidebar** selects the display location and does not change your profiles or scanning state. Both views share your saved global and profile states and link to settings. Closing either view does not turn Spot a Dog off; use the global switch to stop scanning. You can manage configuration even while scanning is off. Save profile edits before closing the editor if you want to keep them.
 
-Choose a profile from the **Profile** dropdown to view its read-only details. Type in **Search keywords** to filter its positive and negative terms immediately. Disabled checkboxes show active/inactive status while viewing; choose **Edit** to change details, keyword activity or keyword text. Switching profiles resets search, with confirmation before discarding changed drafts. Import/export actions live in **Profile backups** at the bottom.
+Choose a profile from the **Profile** dropdown to view its read-only details. Type in **Search keywords** to filter its positive and negative terms immediately. Choose the profile **Edit** action to change its name and enabled state. Keyword Edit and activity controls remain available independently. Switching profiles resets search, with confirmation before discarding changed drafts. Import/export actions live in **Profile backups** at the bottom.
 
-While editing, use **Add Keyword** to enter one term, **Save keyword** to finish that row, and **Save profile** to apply changes. Each row has an activity checkbox (checked = active, unchecked = inactive), **Edit**, and confirmed **Remove** action. Activity is editable in both create and edit modes and persists only with Save profile; Cancel restores the saved profile. Missing activity on legacy keywords defaults to active. Blank or duplicate terms show an inline error.
+Use **Add Keyword** to enter one term and **Save keyword** to persist that row independently for an existing profile. Each row has an activity checkbox (checked = active, unchecked = inactive), **Edit**, **Cancel**, and confirmed **Remove** action. Activity changes and removals save immediately. Profile Save/Cancel affect only name and enabled state; they preserve keyword saves and open keyword drafts. Failed writes retain the row for retry. Initial new-profile keywords are created together with its name using Save profile. Missing activity on legacy keywords defaults to active. Blank or duplicate terms show an inline error.
 
 For example, a profile named **AI Infrastructure** could contain positive terms `GPU`, `inference`, and `data center`, and negative terms `gaming` and `graphics settings`. Default colors are yellow for positives and red for negatives. Each keyword can use one of six presets or any custom color. If the same characters match both kinds, the negative keyword takes precedence regardless of color. You can enable this profile alongside other interests or disable it independently.
 
@@ -38,7 +38,7 @@ To expand a profile, select its destination, enter seeds, and click **Get sugges
 
 ## Keyword highlight colors
 
-Add or edit a keyword to choose Yellow, Red, Green, Blue, Purple, Orange, or a custom color. The selected preset has an outline; the selected name and hex value are shown beside the custom picker. Save keyword updates the draft, and Save profile persists and applies the color. Colors survive reload, reopening, and profile backups. Legacy keywords keep their group defaults. Custom highlights choose black or white foreground text for contrast.
+Add or edit a keyword to choose Yellow, Red, Green, Blue, Purple, Orange, or a custom color. The selected preset has an outline; the selected name and hex value are shown beside the custom picker. Save keyword persists and applies the color independently for existing profiles. Colors survive reload, reopening, and profile backups. Legacy keywords keep their group defaults. Custom highlights choose black or white foreground text for contrast.
 
 ## Availability and limits
 
@@ -48,7 +48,7 @@ Scanning covers supported webpage text, including dynamically added content. Bro
 
 ## Keyword matching criteria
 
-Use **Add Keyword** or **Edit** on a keyword, enter its text and optionally select **Keyword matching criteria**. Each keyword owns its criterion; its group determines highlight color. Save keyword, then Save profile. Default retains literal matching. Criteria are included in profile backups. The [complete match-type table, examples, validation and semantics](keyword-match-criteria.md) describe every supported option.
+Use **Add Keyword** or **Edit** on a keyword, enter its text and optionally select **Keyword matching criteria**. Each keyword owns its criterion; its group determines highlight color. Choose Save keyword to apply it independently for an existing profile. Default retains literal matching. Criteria are included in profile backups. The [complete match-type table, examples, validation and semantics](keyword-match-criteria.md) describe every supported option.
 
 ## AI model choices
 

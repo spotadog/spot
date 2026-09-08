@@ -166,3 +166,8 @@ This table remains the acceptance contract. See the implementation log for what 
 ## Per-keyword colors — prompt 025
 
 [Prompt 025](prompts/025-per-keyword-highlight-colors.md) supersedes fixed highlight colors: adding and editing keywords must offer six presets and a custom picker with a clear selected state. Save profile persists valid six-digit hex colors with the existing keyword data, including backups. Legacy keywords resolve yellow positive/red negative defaults without a migration. Negative overlap precedence follows keyword kind, regardless of selected color.
+
+
+## Independent keyword persistence — prompt 028
+
+[Prompt 028](prompts/028-independent-keyword-saving.md) supersedes the draft-only saves and read-only keyword viewing described in prompts 009/012/014/025. Existing profiles expose keyword Edit/Save, Add, activity and confirmed Remove independently of the profile detail mode. Each row save persists immediately; profile Save/Cancel operate only on name and enabled state, preserving stored keywords and unfinished row edits. Errors retain keyword input for retry. Mutations validate against the latest stored profile and reject stale row values. New-profile creation retains its initial name-and-keywords submission. No schema migration is required.

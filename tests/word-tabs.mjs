@@ -49,18 +49,20 @@ export async function checkWordTabs(page, id) {
         assert.deepEqual(layout, { natural: true, tall: true, pageScroll: true, fits: true });
       }
     }
-    // A hidden unfinished edit must be revealed before validation focuses it.
+    // Saving details preserves an unfinished keyword edit, even in a hidden tab.
     await page.locator('#edit-profile').click();
     const row = page.locator('#negative .keyword-row').first();
     await row.getByRole('button', { name: 'Edit', exact: true }).click();
     await row.getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).fill('unsaved negative');
     await positive.click();
     await page.getByRole('button', { name: 'Save profile', exact: true }).click();
-    await selected('negative');
+    await page.getByText('Profile saved.', { exact: true }).waitFor();
+    await selected('positive');
+    await negative.click();
     assert.equal(await row.getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).inputValue(), 'unsaved negative');
-    assert.equal(await row.getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).evaluate(el => el === document.activeElement), true);
     await row.getByRole('button', { name: 'Cancel', exact: true }).click();
     await positive.click();
+    await page.locator('#edit-profile').click();
     await page.getByRole('button', { name: 'Save profile', exact: true }).click();
     await page.getByText('Profile saved.', { exact: true }).waitFor();
     const saved = await page.evaluate(async id => (await chrome.runtime.sendMessage({ type: 'state.get' })).data.profiles.find(p => p.id === id), profile.id);

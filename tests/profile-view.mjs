@@ -10,6 +10,10 @@ export async function checkProfileView(page, id) {
     return saved;
   });
   for (const surface of ['popup', 'sidepanel']) {
+    await page.evaluate(async id => {
+      const p = (await chrome.runtime.sendMessage({ type: 'state.get' })).data.profiles.find(p => p.id === id);
+      await chrome.runtime.sendMessage({ type: 'profile.save', profile: { ...p, positiveKeywords: ['Dog', 'hot dog', { text: 'cat', active: false }] } });
+    }, fixtures[0].id);
     await page.goto(`chrome-extension://${id}/${surface}/index.html`);
     const selector = page.getByLabel('Profile', { exact: true });
     await selector.selectOption(fixtures[0].id);
@@ -17,7 +21,7 @@ export async function checkProfileView(page, id) {
     assert.equal(await page.getByLabel('Profile name').inputValue(), 'Searchable profile');
     assert.equal(await page.getByLabel('Profile name').isEditable(), false);
     assert.equal(await page.getByLabel('Profile enabled').isEnabled(), false);
-    assert.equal(await page.locator('#positive').getByRole('button', { name: 'Add Keyword' }).isVisible(), false);
+    assert.equal(await page.locator('#positive').getByRole('button', { name: 'Add Keyword' }).isVisible(), true);
     const search = page.getByRole('searchbox', { name: 'Search keywords' });
     const rows = page.locator('#positive .keyword-row:visible');
     await search.fill('DO');
@@ -28,11 +32,12 @@ export async function checkProfileView(page, id) {
     assert.equal(await rows.count(), 0);
     await page.getByRole('tab', { name: 'Positive Words' }).click();
     assert.equal(await rows.first().getByRole('checkbox').isChecked(), true);
-    assert.equal(await rows.first().getByRole('checkbox').isEnabled(), false);
-    assert.equal(await rows.first().getByRole('button', { name: 'Edit', exact: true }).isVisible(), false);
+    assert.equal(await rows.first().getByRole('checkbox').isEnabled(), true);
+    assert.equal(await rows.first().getByRole('button', { name: 'Edit', exact: true }).isVisible(), true);
     await page.locator('#edit-profile').click();
     assert.equal(await rows.first().getByRole('checkbox').isChecked(), true);
     await rows.first().getByRole('checkbox').uncheck();
+    await page.waitForFunction(() => !document.querySelector('#profile-form').inert);
     await rows.first().getByRole('button', { name: 'Edit', exact: true }).click();
     await rows.first().getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).fill('Dog edited');
     // Pending text survives filtering and an unrelated state broadcast.
@@ -46,6 +51,7 @@ export async function checkProfileView(page, id) {
     assert.equal(await rows.first().getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).inputValue(), 'Dog edited');
     await search.fill('');
     await rows.first().getByRole('button', { name: 'Save keyword' }).click();
+    await page.waitForFunction(() => !document.querySelector('#profile-form').inert);
     await page.getByLabel('Profile name').fill('Changed draft');
     page.once('dialog', dialog => dialog.dismiss());
     await page.locator('#cancel-edit').click();
@@ -55,15 +61,15 @@ export async function checkProfileView(page, id) {
     assert.equal(await search.inputValue(), '');
     assert.equal(await page.getByLabel('Profile name').inputValue(), 'Empty profile');
     assert.equal(await page.locator('#positive .keyword-row').count(), 0);
-    assert.equal(await page.locator('#positive').getByText('No keywords yet.', { exact: true }).isVisible(), true);
+    assert.equal(await page.locator('#positive').getByText('No keywords yet. Choose Add Keyword to start.', { exact: true }).isVisible(), true);
     assert.equal(await page.getByLabel('Profile name').isEditable(), false);
     await selector.selectOption(fixtures[0].id);
-    assert.equal(await page.locator('#positive input:checked').count(), 2);
+    assert.equal(await page.locator('#positive input:checked').count(), 1);
     await search.fill('absent');
     assert.equal(await rows.count(), 0);
     assert.equal(await page.locator('#positive').getByText('No keywords match your search.').isVisible(), true);
     await search.fill('');
-    assert.deepEqual(await rows.locator('span').allTextContents(), ['Dog', 'hot dog', 'cat']);
+    assert.deepEqual(await rows.locator('span').allTextContents(), ['Dog edited', 'hot dog', 'cat']);
     for (const label of ['Export Profiles', 'Export Profile', 'Import Profiles', 'Import Profile']) {
       assert.equal(await page.locator('#profile-transfers').getByRole('button', { name: label, exact: true }).count(), 1);
     }
@@ -78,25 +84,26 @@ export async function checkProfileView(page, id) {
     await page.locator('#positive').getByRole('button', { name: 'Add Keyword' }).click();
     await rows.first().getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).fill('new keyword');
     await rows.first().getByRole('button', { name: 'Save keyword' }).click();
+    await page.waitForFunction(() => !document.querySelector('#profile-form').inert);
     assert.deepEqual(await rows.locator('span').allTextContents(), ['new keyword']);
     await rows.first().getByRole('checkbox').uncheck();
+    await page.waitForFunction(() => !document.querySelector('#profile-form').inert);
     await page.getByRole('button', { name: 'Save profile', exact: true }).click();
     await page.getByRole('heading', { name: `Created in ${surface}`, exact: true }).waitFor();
     assert.equal(await page.getByLabel('Profile name').isEditable(), false);
     assert.equal(await selector.locator('option:checked').textContent(), `Created in ${surface}`);
     assert.deepEqual(await rows.locator('span').allTextContents(), ['new keyword']);
     assert.equal(await rows.first().getByRole('checkbox').isChecked(), false);
-    assert.equal(await rows.first().getByRole('checkbox').isEnabled(), false);
-    await rows.first().locator('label.inline').click({ force: true });
-    await page.keyboard.press('Space');
-    assert.equal(await rows.first().getByRole('checkbox').isChecked(), false);
+    assert.equal(await rows.first().getByRole('checkbox').isEnabled(), true);
     await page.locator('#edit-profile').click();
     assert.equal(await rows.first().getByRole('checkbox').isChecked(), false);
     await rows.first().getByRole('checkbox').check();
+    await page.waitForFunction(() => !document.querySelector('#profile-form').inert);
     await page.getByLabel('Profile name').fill(`Renamed in ${surface}`);
     await rows.first().getByRole('button', { name: 'Edit', exact: true }).click();
     await rows.first().getByRole('textbox', { name: /^(Positive|Negative) keyword$/ }).fill('updated keyword');
     await rows.first().getByRole('button', { name: 'Save keyword' }).click();
+    await page.waitForFunction(() => !document.querySelector('#profile-form').inert);
     await page.getByRole('button', { name: 'Save profile', exact: true }).click();
     await page.getByRole('heading', { name: `Renamed in ${surface}`, exact: true }).waitFor();
     const savedProfile = await page.evaluate(async () => {

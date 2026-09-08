@@ -1,7 +1,7 @@
 import { navigationService } from './navigation.js';
 import { fingerprintHistory } from '../storage/count-history.js';
 import { createStore, scanningState } from '../storage/store.js';
-import { makeProfile, mergeKeywords } from '../profiles/model.js';
+import { makeProfile, mergeKeywords, changeKeyword } from '../profiles/model.js';
 import { suggestKeywords } from '../services/ai.js';
 import { exportProfiles, parseImport, mergeProfiles } from '../profiles/transfer.js';
 const store = createStore();
@@ -110,14 +110,19 @@ async function handle(message, sender) {
       case 'global.set':
         if (typeof message.enabled !== 'boolean') throw new Error('Invalid enabled state.');
         return { ...s, enabled: message.enabled };
+      case 'profile.details':
       case 'profile.save': {
         const previous = s.profiles.find(p => p.id === message.profile?.id);
         if (message.profile?.id && !previous) throw new Error('This profile was deleted. Create a new profile.');
         if (!previous && s.profiles.length >= 50) throw new Error('You can save up to 50 profiles.');
-        const profile = makeProfile(message.profile ?? {}, previous);
+        const input = message.type === 'profile.details'
+          ? { ...previous, name: message.profile?.name, enabled: message.profile?.enabled }
+          : message.profile ?? {};
+        const profile = makeProfile(input, previous);
         savedProfileId = profile.id;
         return { ...s, profiles: previous ? s.profiles.map(p => p.id === profile.id ? profile : p) : [...s.profiles, profile] };
       }
+      case 'profile.keyword':
       case 'profile.toggle':
       case 'profile.delete':
       case 'profile.addKeywords': {
@@ -125,7 +130,9 @@ async function handle(message, sender) {
         if (!profile) throw new Error('Profile no longer exists.');
         if (message.type === 'profile.delete') return { ...s, profiles: s.profiles.filter(p => p.id !== message.id) };
         let updated;
-        if (message.type === 'profile.toggle') {
+        if (message.type === 'profile.keyword') {
+          updated = changeKeyword(profile, message);
+        } else if (message.type === 'profile.toggle') {
           if (typeof message.enabled !== 'boolean') throw new Error('Invalid enabled state.');
           updated = makeProfile({ ...profile, enabled: message.enabled }, profile);
         } else {

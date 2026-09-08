@@ -1,5 +1,5 @@
 import { validateColor } from '../highlighting/colors.js';
-import { keywordText, keywordCriterion, keywordKey } from './keyword.js';
+import { keywordText, keywordCriterion, keywordKey, editableKeywords } from './keyword.js';
 import { validateCriteria } from '../matching/criteria.js';
 export const DEFAULT_PREFERENCES = { model: 'gpt-4o-mini', sidebar: false, tracking: false };
 export function normalizeKeywords(value) {
@@ -54,4 +54,23 @@ export function makeProfile(input, existing) {
 }
 export function initialState() {
   return { schemaVersion: 1, enabled: true, profiles: [], preferences: { ...DEFAULT_PREFERENCES } };
+}
+
+// Apply one row mutation to the latest stored profile, never a UI profile draft.
+export function changeKeyword(profile, { kind, previous, value }) {
+  if (!['positive', 'negative'].includes(kind)) throw new Error('Invalid keyword list.');
+  const positiveKeywords = editableKeywords(profile, 'positive');
+  const negativeKeywords = editableKeywords(profile, 'negative');
+  const keywords = kind === 'positive' ? positiveKeywords : negativeKeywords;
+  const index = previous === null ? keywords.length : keywords.findIndex(item => keywordText(item) === keywordText(previous)
+    && keywordKey(item) === keywordKey(previous) && item?.active === previous?.active && item?.color === previous?.color);
+  if (index < 0) throw new Error('This keyword changed or was removed. Reopen the profile and try again.');
+  if (value === null) {
+    if (previous === null) throw new Error('Choose a keyword to remove.');
+    keywords.splice(index, 1);
+  } else {
+    const clean = validateKeyword(value, keywords.filter((_, i) => i !== index));
+    keywords.splice(index, previous === null ? 0 : 1, clean);
+  }
+  return makeProfile({ ...profile, positiveKeywords, negativeKeywords, criteria: [] }, profile);
 }

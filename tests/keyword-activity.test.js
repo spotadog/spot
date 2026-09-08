@@ -13,17 +13,17 @@ class Node {
   append(...nodes) { this.children.push(...nodes); }
   replaceChildren(...nodes) { this.children = nodes; }
   addEventListener(type, fn) { this.listeners[type] = fn; }
-  fire(type) { this.listeners[type]?.({ target: this }); }
-  click() { if (!this.disabled) this.fire('click'); }
+  fire(type) { return this.listeners[type]?.({ target: this }); }
+  click() { if (!this.disabled) return this.fire('click'); }
   focus() {}
   scrollIntoView() {}
   querySelectorAll() { return this.children.flatMap(n => [...(n.tag === 'input' ? [n] : []), ...n.querySelectorAll()]); }
 }
-function fixture(values, editable = false) {
+function fixture(values, editable = false, persist) {
   globalThis.document = { createElement: tag => new Node(tag), querySelector: () => new Node('p') };
   const container = new Node('div');
   let changes = 0;
-  const editor = keywordEditor(container, 'Positive', () => changes++);
+  const editor = keywordEditor(container, 'Positive', () => changes++, () => {}, persist);
   editor.load(values); editor.setEditable(editable);
   return { editor, container, row: i => container.children[0].children[i], get changes() { return changes; } };
 }
@@ -129,4 +129,34 @@ test('custom color creation, edit, cancel and text/activity edits preserve the c
   assert.equal(f.editor.read()[0].color, '#8fc9ff');
   button(row, 'Edit').click(); setText(row, 'cat'); toggle(row, false); button(row, 'Save keyword').click();
   assert.deepEqual(f.editor.read(), [{ text: 'cat', color: '#8fc9ff', active: false }]);
+});
+
+test('row saves await persistence and retain failed edits for retry independently of other drafts', async () => {
+  const calls = [];
+  let fail = true;
+  const f = fixture(['dog', 'cat'], true, async (previous, value) => {
+    calls.push({ previous, value });
+    if (fail) throw Error('Storage unavailable');
+  });
+  const row = f.row(0), other = f.row(1);
+  button(other, 'Edit').click(); setText(other, 'unfinished');
+  button(row, 'Edit').click(); setText(row, 'puppy');
+  await button(row, 'Save keyword').click();
+  assert.equal(row.children.find(n => n.role === 'alert').textContent, 'Storage unavailable');
+  assert.equal(row.children.find(n => n.type === 'text').value, 'puppy');
+  assert.equal(button(row, 'Save keyword').hidden, false);
+  fail = false;
+  await button(row, 'Save keyword').click();
+  assert.deepEqual(calls, [{ previous: 'dog', value: 'puppy' }, { previous: 'dog', value: 'puppy' }]);
+  assert.equal(button(row, 'Save keyword').hidden, true);
+  assert.equal(other.children.find(n => n.type === 'text').value, 'unfinished');
+  button(other, 'Cancel').click();
+  assert.deepEqual(f.editor.read(), ['puppy', 'cat']);
+});
+test('failed activity persistence restores the checkbox and stored row value', async () => {
+  const f = fixture(['dog'], true, async () => { throw Error('Storage unavailable'); });
+  checkbox(f.row(0)).checked = false;
+  await checkbox(f.row(0)).fire('change');
+  assert.equal(checkbox(f.row(0)).checked, true);
+  assert.deepEqual(f.editor.read(), ['dog']);
 });

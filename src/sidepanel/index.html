@@ -14,6 +14,8 @@
 <div id="profiles" class="actions"><button id="edit-profile" hidden>Edit</button><button id="delete-profile" class="danger" hidden>Delete</button></div>
 <section id="editor" hidden><h2 id="editor-title">New profile</h2><form id="profile-form">
 <label for="name">Profile name</label><input id="name" required maxlength="80" placeholder="e.g. AI Infrastructure">
+<label class="inline"><input id="profile-enabled" type="checkbox" checked> Profile enabled</label>
+<div id="save-actions" class="actions"><button type="submit" class="primary">Save profile</button><button type="button" id="cancel-edit">Cancel</button></div>
 <p id="edit-help" class="hint">Select a keyword to inspect it. Choose Edit to make changes.</p>
 <div id="keyword-search-field"><label for="keyword-search">Search keywords</label><input id="keyword-search" type="search" placeholder="Filter this profile’s keywords"></div>
 <div class="word-tabs" role="tablist" aria-label="Word lists">
@@ -22,8 +24,7 @@
 </div>
 <div id="positive-panel" class="keyword-list" role="tabpanel" aria-labelledby="positive-tab" tabindex="0"><small>Yellow by default. Edit a keyword to choose its highlight color.</small><div id="positive"></div></div>
 <div id="negative-panel" class="keyword-list" role="tabpanel" aria-labelledby="negative-tab" tabindex="0" hidden><small>Red by default. Negative words take precedence where terms overlap, regardless of color.</small><div id="negative"></div></div>
-<label class="inline"><input id="profile-enabled" type="checkbox" checked> Profile enabled</label>
-<div id="save-actions" class="actions"><button type="submit" class="primary">Save profile</button><button type="button" id="cancel-edit">Cancel</button></div></form></section>
+</form></section>
 <section><h2>Discover related keywords</h2><p id="ai-model" class="hint"></p><p class="hint">Send seed keywords to your selected AI provider, review suggestions, then choose which to add. API usage may incur charges.</p>
 <label for="ai-profile">Add suggestions to</label><select id="ai-profile"></select>
 <label for="seeds">Seed keywords</label><textarea id="seeds" placeholder="artificial intelligence"></textarea>

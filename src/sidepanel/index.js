@@ -10,8 +10,9 @@ const $ = selector => document.querySelector(selector);
 if (location.pathname.startsWith('/popup/')) document.body.classList.add('popup');
 const markDirty = () => { dirty = true; };
 const tabs = wordTabs($('.word-tabs'));
-const positive = keywordEditor($('#positive'), 'Positive', markDirty, () => tabs.select('positive-tab'));
-const negative = keywordEditor($('#negative'), 'Negative', markDirty, () => tabs.select('negative-tab'));
+const keywordChanged = () => { if (!editingId) markDirty(); };
+const positive = keywordEditor($('#positive'), 'Positive', keywordChanged, () => tabs.select('positive-tab'), (previous, value) => persistKeyword('positive', previous, value));
+const negative = keywordEditor($('#negative'), 'Negative', keywordChanged, () => tabs.select('negative-tab'), (previous, value) => persistKeyword('negative', previous, value));
 let state, editingId = null, suggestionProfile = null;
 let editMode = false, dirty = false, saving = false, loadedProfile = null, refreshRevision = 0;
 function setEditMode(value) {
@@ -20,12 +21,12 @@ function setEditMode(value) {
   $('#profile-enabled').disabled = !value;
   $('#save-actions').hidden = !value;
   $('#edit-profile').hidden = !editingId || value;
-  positive.setEditable(value);
-  negative.setEditable(value);
+  positive.setEditable(true);
+  negative.setEditable(true);
   clearCounts();
   $('#edit-help').textContent = value
-    ? 'Save each keyword, then choose Save profile to apply changes. Cancel returns to viewing.'
-    : 'Checkboxes show keyword activity and are read-only. Choose Edit to make changes.';
+    ? editingId ? 'Save profile applies only the name and enabled state. Keywords save independently.' : 'Name your new profile and add keywords, then choose Save profile to create it.'
+    : 'Edit changes profile details. Each keyword saves independently; activity changes apply immediately.';
 }
 function view(profile, editable = false) {
   if (editingId !== (profile?.id ?? null) || !profile) tabs.select('positive-tab');
@@ -50,8 +51,26 @@ function view(profile, editable = false) {
   dirty = false;
   refreshCounts();
 }
+// New-profile rows belong to its initial creation; saved profiles mutate one row at a time.
+function persistKeyword(kind, previous, value) {
+  if (!editingId) return;
+  return (async () => {
+    if (saving) throw new Error('A save is in progress. Try again when it finishes.');
+    saving = true;
+    $('#profile-form').inert = true;
+    try {
+      await request('profile.keyword', { id: editingId, kind, previous, value });
+      await refresh();
+      loadedProfile = JSON.stringify(state.profiles.find(p => p.id === editingId));
+    } finally {
+      saving = false;
+      $('#profile-form').inert = false;
+      $('#profile-select').disabled = !state.profiles.length;
+    }
+  })();
+}
 function canLeave() {
-  return !!state && !saving && (!dirty || confirm('Discard unsaved profile changes?'));
+  return !!state && !saving && (!(dirty || positive.hasPending() || negative.hasPending()) || confirm('Discard unsaved profile changes?'));
 }
 $('#profile-select').addEventListener('change', () => {
   const id = $('#profile-select').value;
@@ -96,7 +115,7 @@ async function refresh() {
   $('#profiles-empty').hidden = !!state.profiles.length;
   selector.value = editingId ?? '';
   // Broadcasts must not replace a draft or reset search/selection for unrelated changes.
-  if (!editMode && !saving) {
+  if (!editMode && !saving && !positive.hasPending() && !negative.hasPending()) {
     const profile = state.profiles.find(p => p.id === editingId) ?? state.profiles[0];
     if (JSON.stringify(profile ?? null) !== loadedProfile) view(profile);
   }
@@ -169,7 +188,18 @@ $('#sidebar-mode').addEventListener('change', async () => {
 });
 action($('#configure-key'), () => chrome.runtime.openOptionsPage());
 action($('#new-profile'), () => { if (canLeave()) { view(undefined, true); report(''); $('#name').focus(); } });
-action($('#cancel-edit'), () => { if (canLeave()) { view(state.profiles.find(p => p.id === editingId) ?? state.profiles[0]); report(''); $('#edit-profile').focus(); } });
+action($('#cancel-edit'), () => {
+  if (saving || (dirty && !confirm('Discard unsaved profile details?'))) return;
+  const profile = state.profiles.find(p => p.id === editingId);
+  if (profile) {
+    $('#name').value = profile.name;
+    $('#profile-enabled').checked = profile.enabled;
+    dirty = false;
+    setEditMode(false);
+  } else view(state.profiles[0]);
+  report('');
+  $('#edit-profile').focus();
+});
 action($('#settings'), () => chrome.runtime.openOptionsPage());
 $('#profile-form').addEventListener('submit', async event => {
   event.preventDefault();
@@ -179,16 +209,26 @@ $('#profile-form').addEventListener('submit', async event => {
   button.disabled = true;
   $('#profile-select').disabled = true;
   try {
-    const profile = { id: editingId, name: $('#name').value, positiveKeywords: positive.read(), negativeKeywords: negative.read(), enabled: $('#profile-enabled').checked, criteria: [] };
+    const existing = !!editingId;
+    const profile = { id: editingId, name: $('#name').value, enabled: $('#profile-enabled').checked,
+      ...(!existing ? { positiveKeywords: positive.read(), negativeKeywords: negative.read(), criteria: [] } : {}) };
     $('#profile-form').inert = true;
     report('Saving profile…');
-    const saved = await request('profile.save', { profile });
+    const saved = await request(existing ? 'profile.details' : 'profile.save', { profile });
     editingId = saved.id;
     editMode = dirty = false;
-    loadedProfile = null;
-    saving = false;
+    if (existing) {
+      await refresh();
+      const current = state.profiles.find(p => p.id === editingId);
+      loadedProfile = JSON.stringify(current);
+      $('#editor-title').textContent = current.name;
+      setEditMode(false);
+    } else {
+      loadedProfile = null;
+      saving = false;
+      await refresh();
+    }
     report('Profile saved.');
-    await refresh();
     $('#edit-profile').focus();
   } catch (error) { report(error); }
   finally { saving = false; button.disabled = false; $('#profile-form').inert = false; $('#profile-select').disabled = !state.profiles.length; }
