@@ -218,3 +218,12 @@ Prompt 002 is the repository's only publication workflow: current `main` branch,
 - Validation: npm run check passed 98 unit tests, build and the full automated MV3 suite, including popup/sidebar color changes, rendered ranges and browser-restart persistence. No manual/live-site browser testing. See prompt 025 for coverage and resolved test-fixture issues.
 - Publication: current main, existing SSH identity, no new branch; fetched origin without divergence. Invalid GitHub CLI authentication requires the documented repository/commit review-note fallback.
 - Next step: user to reload dist/ and check colors in Chrome. Older versions cannot import backups with color fields; Save profile applies color drafts.
+
+## Autoplay pause after positive keyword — prompt 029
+
+- Request: optional autoplay pause after finishing content containing an encountered highlighted positive keyword; disabled behavior unchanged. Complete prompt saved before implementation.
+- Changes: per-tab checkbox, validated session setting, local rendered-positive range handoff, content-boundary detection and clamped pause through the existing controller. Resume skips consumed content; negative highlights do not trigger pauses. Matching, storage boundaries and AI services retain their architecture.
+- Coverage: unit tests for settings/isolation, positive range polarity, visible encounters, boundary stopping, resume/cancellation, detached/growing content and pagination precedence; automated MV3 UI fixture for a nested semantic post with custom highlights.
+- Limits/next step: document scrolling and ordinary semantic posts/sections/divs; reload dist/ and verify representative live-site layouts. No manual/live-site testing.
+- Publication: existing main branch, no new branch, existing SSH identity; origin fetched without divergence. Invalid GitHub CLI authentication requires the documented repository/commit review-note fallback.
+- Final validation: npm run check passed 124 unit tests, build and the full automated MV3 browser suite; git diff --check passed. No known automated failures remain.

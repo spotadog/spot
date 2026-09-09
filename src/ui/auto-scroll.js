@@ -18,6 +18,7 @@ export function tabView(query, read, render) {
 export function wireAutoScroll() {
   const $ = id => document.getElementById(id);
   const toggle = $('auto-scroll'), speed = $('scroll-speed'), pause = $('scroll-pause'), status = $('scroll-status');
+  const positivePause = $('scroll-positive-pause');
   let state = null, disposed = false;
   const view = tabView(async () => (await chrome.tabs.query({ active: true, currentWindow: true }))[0], async id => {
     const [saved, supported] = await Promise.all([
@@ -30,7 +31,8 @@ export function wireAutoScroll() {
     toggle.disabled = !value?.supported;
     toggle.checked = value?.enabled ?? false;
     $('scroll-controls').hidden = !value?.enabled;
-    speed.disabled = pause.disabled = !value?.supported;
+    positivePause.disabled = speed.disabled = pause.disabled = !value?.supported;
+    positivePause.checked = value?.pauseAfterPositive ?? false;
     speed.value = value?.speed ?? 120;
     $('scroll-speed-value').textContent = `${speed.value} px/s`;
     pause.textContent = value?.paused ? 'Resume' : 'Pause';
@@ -40,12 +42,13 @@ export function wireAutoScroll() {
   const change = async payload => {
     const tabId = view.tabId;
     if (tabId === null) return;
-    toggle.disabled = speed.disabled = pause.disabled = true;
+    toggle.disabled = positivePause.disabled = speed.disabled = pause.disabled = true;
     try { await request('scroll.set', { tabId, ...payload }); }
     catch (error) { report(error); }
     finally { refresh(); }
   };
   toggle.addEventListener('change', () => change({ enabled: toggle.checked }));
+  positivePause.addEventListener('change', () => change({ pauseAfterPositive: positivePause.checked }));
   speed.addEventListener('input', () => { $('scroll-speed-value').textContent = `${speed.value} px/s`; });
   speed.addEventListener('change', () => change({ speed: Number(speed.value) }));
   pause.addEventListener('click', () => change({ paused: !state.paused }));

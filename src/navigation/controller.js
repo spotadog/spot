@@ -1,8 +1,10 @@
+import { PositivePause } from './positive-pause.js';
 import { running } from './state.js';
 import { nextPage } from './pagination.js';
 // All movement uses current scrollY; nothing restores or continually enforces a saved position.
 export class AutoNavigator {
-  constructor(win, send, findNext = nextPage) {
+  constructor(win, send, findNext = nextPage, positiveRanges = () => []) {
+    this.positiveRanges = positiveRanges; this.positivePause = new PositivePause();
     this.win = win; this.doc = win.document; this.send = send; this.findNext = findNext;
     this.state = { enabled: false, paused: false, revision: -1 }; this.epoch = 0;
     this.url = this.doc.location.href;
@@ -48,6 +50,7 @@ export class AutoNavigator {
     }
     if (this.disposed || this.suspended || state.revision < this.state.revision) return;
     const wasRunning = running(this.state);
+    if (!state.enabled || !state.pauseAfterPositive) this.positivePause.reset();
     this.state = state;
     if (!running(state)) this.stop();
     else if (!this.frame) {
@@ -87,7 +90,14 @@ export class AutoNavigator {
     if (!this.state.pending && !this.busy) {
       this.distance = (this.distance ?? 0) + this.state.speed * Math.min(time - this.lastFrame, 100) / 1000;
       const pixels = Math.floor(this.distance); this.distance -= pixels;
-      if (pixels) this.win.scrollBy({ top: pixels, behavior: 'instant' });
+      const boundary = this.state.pauseAfterPositive ? this.positivePause.boundary(this.win, this.positiveRanges()) : null;
+      const movement = boundary === null ? pixels : Math.min(pixels, Math.max(0, boundary - this.win.scrollY));
+      if (movement) this.win.scrollBy({ top: movement, behavior: 'instant' });
+      if (boundary !== null && this.win.scrollY >= boundary - 1) {
+        this.positivePause.finish();
+        this.pause('Positive keyword: next content reached');
+        return;
+      }
     }
     this.lastFrame = time;
     if (time - this.lastCheck >= 500 && !this.busy) {
@@ -148,6 +158,7 @@ export class AutoNavigator {
       if (!running(this.state) || this.state.pending) return;
       // A replaced AJAX page starts at the top; appended infinite content keeps position.
       if (this.doc.scrollingElement.scrollHeight <= this.pendingHeight) this.win.scrollTo({ top: 0, behavior: 'instant' });
+      this.positivePause.reset();
       this.pendingSignature = null; this.url = this.doc.location.href;
       this.bottomSince = null; this.stableSince = this.win.performance.now();
     } catch { await this.pause('Next page unavailable'); }

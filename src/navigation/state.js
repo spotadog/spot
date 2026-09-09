@@ -1,4 +1,4 @@
-export const defaults = () => ({ enabled: false, paused: false, speed: 120, revision: 0, documentId: null, url: '', pending: null, visited: [], reason: '' });
+export const defaults = () => ({ enabled: false, paused: false, speed: 120, pauseAfterPositive: false, revision: 0, documentId: null, url: '', pending: null, visited: [], reason: '' });
 export const running = state => state.enabled && !state.paused;
 export function transition(previous, action, now = Date.now()) {
   const s = structuredClone(previous);
@@ -11,6 +11,10 @@ export function transition(previous, action, now = Date.now()) {
     if (action.paused !== undefined) {
       if (typeof action.paused !== 'boolean' || !s.enabled) throw Error('Enable Auto Scroll first.');
       s.paused = action.paused; s.pending = null; s.reason = ''; // Resume never sets a scroll position.
+    }
+    if (action.pauseAfterPositive !== undefined) {
+      if (typeof action.pauseAfterPositive !== 'boolean') throw Error('Invalid positive keyword pause toggle.');
+      s.pauseAfterPositive = action.pauseAfterPositive;
     }
     if (action.speed !== undefined) {
       if (!Number.isInteger(action.speed) || action.speed < 30 || action.speed > 600) throw Error('Choose a speed from 30 to 600 pixels per second.');

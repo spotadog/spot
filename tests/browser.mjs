@@ -1,6 +1,6 @@
 import { checkIndependentKeywordSaving } from './independent-keyword-saving.mjs';
 import { checkKeywordColors } from './keyword-colors.mjs';
-import { checkAutoScroll } from './auto-scroll.mjs';
+import { checkAutoScroll, checkPositivePause } from './auto-scroll.mjs';
 import { checkPopupLayout } from './popup-layout.mjs';
 import { checkNewProfileKeywords } from './new-profile-keywords.mjs';
 import { checkWordTabs } from './word-tabs.mjs';
@@ -668,6 +668,7 @@ try {
   await checkWordTabs(criteriaPanel, id);
   await checkPopupLayout(criteriaPanel, id);
   await checkAutoScroll(context, criteriaPanel, `http://127.0.0.1:${server.address().port}`);
+  await checkPositivePause(context, criteriaPanel, `http://127.0.0.1:${server.address().port}`);
   await checkKeywordColors(context, criteriaPanel, id, `http://127.0.0.1:${server.address().port}`);
   // A genuinely fresh browser context must not restore transient scrolling sessions.
   await criteriaPanel.evaluate(async () => {

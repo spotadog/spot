@@ -62,9 +62,11 @@ test('worker authenticates top frames, scopes publications and cleans tab close/
   const ui = { id: 'extension', url: 'chrome-extension://extension/popup/index.html' };
   const content = { id: 'extension', tab: { id: 1 }, frameId: 0, documentId: 'one', url: 'https://site.test/' };
   await handle({ type: 'scroll.hello', instance: 'one' }, content);
-  await handle({ type: 'scroll.set', tabId: 1, enabled: true }, ui);
+  await handle({ type: 'scroll.set', tabId: 1, enabled: true, pauseAfterPositive: true }, ui);
   await assert.rejects(handle({ type: 'scroll.hello', instance: 'old' }, { ...content, documentId: 'old' }), /Page changed/);
   assert.equal((await store.read(1)).documentId, 'one');
+  assert.equal((await store.read(1)).pauseAfterPositive, true);
+  assert.equal((await handle({ type: 'scroll.get', tabId: 2 }, ui)).pauseAfterPositive, false);
   assert.equal((await handle({ type: 'scroll.get', tabId: 2 }, ui)).enabled, false);
   assert.ok(published.every(([id]) => id === 1));
   await assert.rejects(handle({ type: 'scroll.set', tabId: 2, enabled: true }, content));
@@ -193,4 +195,72 @@ test('pagination above a long footer is revealed and revalidated only after cons
   f.win.scrollY = 1500;
   for (let i = 0; i < 12; i++) await f.step();
   assert.equal(visible, true); assert.equal(clicks, 1);
+});
+
+function positiveFixture(f, { start = 100, end = 700, next = 800 } = {}) {
+  const sibling = { matches: () => true, checkVisibility: () => true, getBoundingClientRect: () => ({ top: next - f.win.scrollY, height: 300 }) };
+  const block = { isConnected: true, parentElement: f.doc.body, nextElementSibling: sibling,
+    getBoundingClientRect: () => ({ bottom: end - f.win.scrollY }) };
+  const range = { startContainer: { parentElement: { closest: () => block } },
+    getClientRects: () => [{ top: start - f.win.scrollY, bottom: start + 20 - f.win.scrollY, left: 10, right: 100, width: 90, height: 20 }] };
+  f.win.innerWidth = 1000;
+  f.controller.positiveRanges = () => [range];
+  return { block, range };
+}
+test('positive pause toggle defaults off, validates and preserves tab state through navigation', () => {
+  assert.equal(defaults().pauseAfterPositive, false);
+  const s = command(hello(defaults()), 'set', { enabled: true, pauseAfterPositive: true });
+  assert.equal(hello(s, 'detail', 'https://site.test/detail').pauseAfterPositive, true);
+  assert.equal(command(s, 'set', { paused: true }).pauseAfterPositive, true);
+  for (const value of [null, 1, 'true']) assert.throws(() => command(s, 'set', { pauseAfterPositive: value }));
+});
+test('highlight encounter finishes current content, clamps at next boundary, pauses once and resumes', async () => {
+  const f = fixture(); await flush(); positiveFixture(f);
+  await f.set({ enabled: true, pauseAfterPositive: true, speed: 600 });
+  await f.step(100); assert.equal(f.controller.state.paused, false);
+  for (let i = 0; i < 20 && !f.controller.state.paused; i++) await f.step(100);
+  assert.equal(f.win.scrollY, 800); assert.equal(f.controller.state.paused, true);
+  assert.match(f.controller.state.reason, /Positive keyword/);
+  assert.equal(f.frames.size, 0); assert.equal(f.calls.includes('scroll.next'), false);
+  await f.set({ paused: false }); await f.step(100);
+  assert.equal(f.win.scrollY, 860); assert.equal(f.controller.state.paused, false);
+});
+test('disabled option, offscreen positives and absent positive highlights do not trigger pauses', async () => {
+  for (const mode of ['disabled', 'offscreen', 'negative']) {
+    const f = fixture(); await flush(); positiveFixture(f, { start: mode === 'offscreen' ? 1900 : 100 });
+    if (mode === 'negative') f.controller.positiveRanges = () => [];
+    await f.set({ enabled: true, pauseAfterPositive: mode !== 'disabled', speed: 600 });
+    for (let i = 0; i < 16; i++) await f.step(100);
+    assert.equal(f.controller.state.paused, false); assert.equal(f.win.scrollY, 960);
+    f.controller.dispose();
+  }
+});
+test('turning the option off cancels an armed pause; detached content is discarded', async () => {
+  for (const mode of ['off', 'detached']) {
+    const f = fixture(); await flush(); const { block } = positiveFixture(f);
+    await f.set({ enabled: true, pauseAfterPositive: true, speed: 600 }); await f.step(100);
+    if (mode === 'off') await f.set({ pauseAfterPositive: false }); else block.isConnected = false;
+    for (let i = 0; i < 16; i++) await f.step(100);
+    assert.equal(f.controller.state.paused, false);
+    f.controller.dispose();
+  }
+});
+test('final positive content pauses at reachable document end before pagination', async () => {
+  const f = fixture(); await flush(); const { block } = positiveFixture(f, { end: 2000 });
+  block.nextElementSibling = null;
+  await f.set({ enabled: true, pauseAfterPositive: true, speed: 600 });
+  f.win.scrollY = 1480; // Encounter was already armed while reading the block.
+  f.controller.positivePause.target = block;
+  await f.step(100);
+  assert.equal(f.win.scrollY, 1500); assert.equal(f.controller.state.paused, true);
+  assert.equal(f.calls.includes('scroll.next'), false);
+});
+
+test('armed boundary follows growing content and newly appended sections', async () => {
+  const f = fixture(); await flush(); const { block } = positiveFixture(f);
+  await f.set({ enabled: true, pauseAfterPositive: true, speed: 600 }); await f.step(100);
+  block.getBoundingClientRect = () => ({ bottom: 1000 - f.win.scrollY });
+  block.nextElementSibling.getBoundingClientRect = () => ({ top: 1100 - f.win.scrollY, height: 500 });
+  for (let i = 0; i < 20 && !f.controller.state.paused; i++) await f.step(100);
+  assert.equal(f.win.scrollY, 1100); assert.equal(f.controller.state.paused, true);
 });
