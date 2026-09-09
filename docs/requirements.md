@@ -177,3 +177,7 @@ This table remains the acceptance contract. See the implementation log for what 
 The per-tab Auto Scroll controls include independent, off-by-default Pause on positive keyword and Slow down on positive keyword toggles. A positive-matching post pauses when its top reaches the eyeball level, default 50% of the visible page height; Settings configures the globally persisted level from 10% to 90%. This supersedes the earlier pause at the next content boundary. Resume skips the consumed post.
 
 The slowdown alternative uses one-quarter of the selected speed while a positive-matching post spans the configured level, and restores normal speed on nonmatching content. It overrides automatic keyword pausing if both toggles are selected, without modifying either selection or saved speed. Negative-only highlights do not trigger these modes. Disabling both retains ordinary autoplay; manual Pause and navigation safeguards remain effective.
+
+## Auto Scroll Resume hotkey — prompt 032
+
+Alt+Shift+R (Option+Shift+R on Mac) performs the same active-tab action as Resume, preserving scroll position, speed and keyword modes. The command works without an open popup/sidebar, never enables disabled scrolling or pauses running scrolling, and is configurable through Chrome extension shortcut settings. Unsupported/closed/missing tabs are handled safely.

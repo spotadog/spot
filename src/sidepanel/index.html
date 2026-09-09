@@ -5,6 +5,7 @@
 <section><label class="inline"><input type="checkbox" id="tracking-enabled"> Track keyword occurrences</label><p class="hint">Live counts for saved keywords on the current page. Pauses with Highlight pages.</p></section>
 <section><label class="inline"><input type="checkbox" id="auto-scroll" disabled> Auto Scroll</label>
 <div id="scroll-controls" hidden><label class="inline"><input type="checkbox" id="scroll-positive-pause"> Pause on positive keyword</label><label class="inline"><input type="checkbox" id="scroll-positive-slow"> Slow down on positive keyword</label><p class="hint">Slowdown uses ¼ speed at the eyeball level instead of pausing, even if both options are checked. Adjust the eyeball level in Settings.</p><label for="scroll-speed">Scroll speed <output id="scroll-speed-value" for="scroll-speed">120 px/s</output></label><input id="scroll-speed" type="range" min="30" max="600" step="10" value="120"><button id="scroll-pause" type="button">Pause</button></div>
+<p id="scroll-shortcut" class="hint">Resume shortcut: configure at chrome://extensions/shortcuts.</p>
 <p id="scroll-status" class="hint" role="status">Loading tab…</p><p class="hint">Scrolls and follows supported next-page controls. Settings apply only to this tab.</p></section>
 <p id="page-status" class="hint" role="status"></p>
 <p id="status" role="status" aria-live="polite"></p>

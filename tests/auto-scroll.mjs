@@ -38,7 +38,12 @@ export async function checkAutoScroll(context, panel, origin) {
   const saved = await panel.evaluate(async tabId => (await chrome.runtime.sendMessage({ type: 'scroll.get', tabId })).data, tabId);
   assert.equal(saved.paused, true); assert.equal(saved.speed, 600);
   await site.evaluate(() => scrollTo(0, 500));
-  await panel.evaluate(() => document.querySelector('#scroll-pause').click());
+  const commands = await panel.evaluate(() => chrome.commands.getAll());
+  assert.ok(commands.some(command => command.name === 'resume-auto-scroll' && command.shortcut));
+  // Headless CDP key injection does not activate the native Chrome command.
+  // Unit tests dispatch the command handler; here verify its shared Resume path.
+  const resumed = await panel.evaluate(tabId => chrome.runtime.sendMessage({ type: 'scroll.resume', tabId }), tabId);
+  assert.equal(resumed.ok, true);
   await site.waitForFunction(() => scrollY > 550);
   await site.waitForURL('**/scroll?page=2');
   await site.waitForFunction(() => scrollY > 50);

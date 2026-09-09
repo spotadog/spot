@@ -244,3 +244,13 @@ Prompt 002 is the repository's only publication workflow: current `main` branch,
 - Validation: npm run check passed 135 unit tests, build and the complete automated MV3 suite; focused navigation tests passed with worker isolation assertions; git diff --check passed. Browser fixtures verify persisted configuration, 25/50/75% pause positions, Resume and measured slow/normal movement. No manual/live-site tests or AI calls.
 - Issues/next step: the checkout had no eyeball control, so it was added to Settings. Prior boundary behavior is superseded. Reload dist/, choose the desired reading level, and verify representative pages; existing nested-scroll/unusual-layout limitations remain.
 - Publication: current main, no new branch, existing SSH identity from prompt 002; fetched origin without divergence. Invalid GitHub CLI authentication requires the documented repository/commit review-note fallback.
+
+## Auto Scroll Resume hotkey — prompt 032
+
+- Request: a keyboard shortcut performing the existing Resume action; complete prompt saved before implementation.
+- Changes: native resume-auto-scroll command defaults to Alt+Shift+R (Option+Shift+R on Mac); the worker targets the command's tab or active tab in the last focused window. Both button and shortcut use a serialized resume-only action that preserves speed/modes/position and ignores running/off states. Shared controls show the assigned shortcut and Chrome remapping guidance. No new permissions or page keyboard listeners.
+- Coverage: unit tests exercise command/button parity, active-tab isolation, focus changes, repeated presses, disabled state and missing/unsupported/failure paths. The browser fixture checks native registration and real Resume movement from a restored position.
+- Investigation/limit: Playwright headless key injection did not trigger the registered native command, timing out the initial browser attempt. Native OS key dispatch remains a manual check documented in README; command handling is verified with unit events and the shared live-extension action.
+- Publication: current main, no new branch, existing SSH identity from prompt 002; origin fetched without divergence. Invalid GitHub CLI authentication requires the documented repository/commit review-note fallback.
+- Next step: reload dist/, verify the native Resume key in Chrome, and remap it at chrome://extensions/shortcuts if desired or unassigned.
+- Final validation: npm run check passed 140 unit tests, build and the full automated MV3 browser suite; git diff --check passed. Native OS key dispatch was not manually tested.

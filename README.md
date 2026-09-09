@@ -44,7 +44,7 @@ For manual acceptance, check the pinned icon at normal and high-DPI display scal
 
 - Multiple named profiles with stable IDs, enabled states, and creation/update timestamps.
 - Select profiles from a dropdown in the popup or side panel; view and search their keywords, use Edit for profile details, or add/edit/remove individual keywords directly.
-- Optional [Auto Scroll](docs/features.md#auto-scroll-and-automatic-pagination) per tab, with adjustable speed, Pause/Resume, optional pause at a configurable eyeball level or slowdown on positive-matching posts, infinite scrolling and supported automatic pagination. Tab sessions reset on browser restart.
+- Optional [Auto Scroll](docs/features.md#auto-scroll-and-automatic-pagination) per tab, with adjustable speed, Pause/Resume (Alt+Shift+R, or Option+Shift+R on Mac, to resume), optional pause at a configurable eyeball level or slowdown on positive-matching posts, infinite scrolling and supported automatic pagination. Tab sessions reset on browser restart.
 - Global pause removes highlights and disconnects scanning observers while preserving profiles.
 - Case-insensitive literal words and phrases, repeated matches, flexible whitespace, and Unicode-aware word boundaries.
 - [17 selectable keyword match criteria](docs/keyword-match-criteria.md): word/phrase operations, word lengths, numbers, URLs, email, hashtags, mentions and advanced regex in both editors.
@@ -190,6 +190,7 @@ A live request to either provider requires your own configured key and is not ma
 3. Confirm `GPU gaming` highlights GPU in yellow and gaming in red; check overlapping terms, negative-only profiles, and removal/reappearance with profile and global toggles.
 4. In Settings, configure each provider with your own real API key, select multiple predefined models, and switch between providers. Verify the saved model and key persist. Request suggestions with each provider, dismiss an unwanted candidate, and verify only selected suggestions are added to the chosen list.
 5. Restart Chrome and verify profiles/settings remain. Remove the key if no longer needed.
+6. Enable Auto Scroll, pause it, close the popup/sidebar, then press **Alt+Shift+R** (**Option+Shift+R** on Mac). Verify scrolling resumes from the current position and repeated presses leave it running. Confirm another tab is unaffected. Check or remap the binding at `chrome://extensions/shortcuts`. Unit tests cover the command handler and browser tests cover registration/shared Resume; headless key injection does not verify native OS shortcut dispatch.
 
 ## Development prompt history
 

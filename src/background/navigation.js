@@ -19,7 +19,7 @@ export function navigationService(api = chrome, store = createTabStore()) {
     await api.tabs.get(id); // Closed tabs cannot recreate records through late messages.
     if (message.type === 'scroll.get' && trusted) return (await store.read(id)) ?? defaults();
     let action;
-    if (trusted && message.type === 'scroll.set') {
+    if (trusted && ['scroll.set', 'scroll.resume'].includes(message.type)) {
       const status = await api.tabs.sendMessage(id, { type: 'page.status' }, { frameId: 0 }).catch(() => null);
       if (!status?.supported) throw Error('Auto Scroll is unavailable on this page. Reload an HTTP/HTTPS page.');
       action = { type: 'set', enabled: message.enabled, paused: message.paused, speed: message.speed, pauseAfterPositive: message.pauseAfterPositive, slowOnPositive: message.slowOnPositive };
@@ -34,6 +34,12 @@ export function navigationService(api = chrome, store = createTabStore()) {
         // serialized mutation so a delayed hello cannot reclaim a navigated tab.
         const current = await api.tabs.sendMessage(id, { type: 'page.status' }, { frameId: 0 });
         if (!message.instance || current?.scrollInstance !== message.instance) throw Error('Page changed.');
+      }
+      // Both the button and command use this serialized, resume-only action.
+      // A repeated key must not pause a running tab or enable a disabled one.
+      if (message.type === 'scroll.resume') {
+        if (!old?.enabled || !old.paused) return old ?? defaults();
+        return transition(old, { type: 'set', paused: false });
       }
       return transition(old ?? defaults(), action);
     });

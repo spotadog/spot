@@ -44,7 +44,7 @@ export function wireAutoScroll() {
     const tabId = view.tabId;
     if (tabId === null) return;
     toggle.disabled = positiveSlow.disabled = positivePause.disabled = speed.disabled = pause.disabled = true;
-    try { await request('scroll.set', { tabId, ...payload }); }
+    try { await request(payload.paused === false ? 'scroll.resume' : 'scroll.set', { tabId, ...payload }); }
     catch (error) { report(error); }
     finally { refresh(); }
   };
@@ -64,5 +64,10 @@ export function wireAutoScroll() {
     chrome.tabs.onUpdated.removeListener(refresh);
     chrome.runtime.onMessage.removeListener(message);
   }, { once: true });
+  chrome.commands.getAll().then(commands => {
+    if (disposed) return;
+    const shortcut = commands.find(command => command.name === 'resume-auto-scroll')?.shortcut;
+    $('scroll-shortcut').textContent = shortcut ? `Resume shortcut: ${shortcut}. Change it at chrome://extensions/shortcuts.` : 'Assign a Resume shortcut at chrome://extensions/shortcuts.';
+  }).catch(() => {});
   refresh();
 }

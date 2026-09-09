@@ -1,3 +1,4 @@
+import { resumeCommand } from './commands.js';
 import { navigationService } from './navigation.js';
 import { fingerprintHistory } from '../storage/count-history.js';
 import { createStore, scanningState } from '../storage/store.js';
@@ -6,6 +7,7 @@ import { suggestKeywords } from '../services/ai.js';
 import { exportProfiles, parseImport, mergeProfiles } from '../profiles/transfer.js';
 const store = createStore();
 const navigate = navigationService();
+chrome.commands.onCommand.addListener(resumeCommand(chrome, navigate));
 async function applyDisplay(sidebar) {
   // Global options intentionally omit tabId so every tab uses the saved mode.
   await chrome.sidePanel.setOptions({ path: 'sidepanel/index.html', enabled: sidebar });
