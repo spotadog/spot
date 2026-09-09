@@ -64,24 +64,31 @@ export async function checkPositivePause(context, panel, origin) {
     await chrome.runtime.sendMessage({ type: 'global.set', enabled: true });
     return response.data.id;
   });
-  const site = await context.newPage();
-  await site.route(`${origin}/positive-scroll`, route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><body style="margin:0"><article style="height:900px"><div><p style="margin:0">autoplaypositive autoplaynegative</p></div></article><section id="next" style="height:1800px">Next content</section></body>' }));
-  await site.goto(`${origin}/positive-scroll`);
-  await site.bringToFront();
-  const tabId = await panel.evaluate(async url => (await chrome.tabs.query({})).find(t => t.url === url).id, site.url());
-  await panel.waitForFunction(() => !document.querySelector('#auto-scroll').disabled);
-  await panel.evaluate(() => document.querySelector('#auto-scroll').click());
-  await panel.waitForFunction(() => !document.querySelector('#scroll-positive-pause').disabled && document.querySelector('#auto-scroll').checked);
-  await panel.evaluate(() => document.querySelector('#scroll-positive-pause').click());
-  await panel.waitForFunction(() => document.querySelector('#scroll-positive-pause').checked && !document.querySelector('#scroll-speed').disabled);
-  await panel.evaluate(() => { const speed = document.querySelector('#scroll-speed'); speed.value = '600'; speed.dispatchEvent(new Event('change')); });
-  await panel.waitForFunction(() => document.querySelector('#scroll-status').textContent.includes('Positive keyword'));
-  assert.ok(Math.abs(await site.evaluate(() => document.querySelector('#next').getBoundingClientRect().top)) <= 1);
-  const pausedY = await site.evaluate(() => scrollY);
-  await site.waitForTimeout(200); assert.equal(await site.evaluate(() => scrollY), pausedY);
-  await panel.evaluate(() => document.querySelector('#scroll-pause').click());
-  await site.waitForFunction(y => scrollY > y + 50, pausedY);
-  assert.equal((await panel.evaluate(async tabId => (await chrome.runtime.sendMessage({ type: 'scroll.get', tabId })).data, tabId)).paused, false);
-  await site.close();
+  const layouts = [
+    '<article style="height:900px"><div><p style="margin:0">autoplaypositive autoplaynegative</p></div></article><section id="next" style="height:1800px">Next content</section>',
+    '<section><div style="height:900px"><div><p style="margin:0">autoplaypositive autoplaynegative</p></div></div><div id="next" style="height:1800px">Next post</div></section>',
+    '<p style="height:900px;margin:0">autoplaypositive autoplaynegative</p><section id="next" style="height:1800px">Next section</section>'
+  ];
+  for (const layout of layouts) {
+    const site = await context.newPage();
+    await site.route(`${origin}/positive-scroll`, route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><body style="margin:0">${layout}</body>` }));
+    await site.goto(`${origin}/positive-scroll`);
+    await site.bringToFront();
+    const tabId = await panel.evaluate(async url => (await chrome.tabs.query({})).find(t => t.url === url).id, site.url());
+    await panel.waitForFunction(() => !document.querySelector('#auto-scroll').disabled);
+    await panel.evaluate(() => document.querySelector('#auto-scroll').click());
+    await panel.waitForFunction(() => !document.querySelector('#scroll-positive-pause').disabled && document.querySelector('#auto-scroll').checked);
+    await panel.evaluate(() => document.querySelector('#scroll-positive-pause').click());
+    await panel.waitForFunction(() => document.querySelector('#scroll-positive-pause').checked && !document.querySelector('#scroll-speed').disabled);
+    await panel.evaluate(() => { const speed = document.querySelector('#scroll-speed'); speed.value = '600'; speed.dispatchEvent(new Event('change')); });
+    await panel.waitForFunction(() => document.querySelector('#scroll-status').textContent.includes('Positive keyword'));
+    assert.ok(Math.abs(await site.evaluate(() => document.querySelector('#next').getBoundingClientRect().top)) <= 1);
+    const pausedY = await site.evaluate(() => scrollY);
+    await site.waitForTimeout(200); assert.equal(await site.evaluate(() => scrollY), pausedY);
+    await panel.evaluate(() => document.querySelector('#scroll-pause').click());
+    await site.waitForFunction(y => scrollY > y + 50, pausedY);
+    assert.equal((await panel.evaluate(async tabId => (await chrome.runtime.sendMessage({ type: 'scroll.get', tabId })).data, tabId)).paused, false);
+    await site.close();
+  }
   await panel.evaluate(async id => chrome.runtime.sendMessage({ type: 'profile.delete', id }), saved);
 }

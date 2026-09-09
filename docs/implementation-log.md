@@ -227,3 +227,12 @@ Prompt 002 is the repository's only publication workflow: current `main` branch,
 - Limits/next step: document scrolling and ordinary semantic posts/sections/divs; reload dist/ and verify representative live-site layouts. No manual/live-site testing.
 - Publication: existing main branch, no new branch, existing SSH identity; origin fetched without divergence. Invalid GitHub CLI authentication requires the documented repository/commit review-note fallback.
 - Final validation: npm run check passed 124 unit tests, build and the full automated MV3 browser suite; git diff --check passed. No known automated failures remain.
+
+## Fix missed auto-scroll keyword pauses — prompt 030
+
+- Request: repair keyword-triggered pauses according to the existing optional positive-highlight behavior; complete prompt preserved before implementation.
+- Reproduced failures: the old content resolver selected a whole section wrapping div posts, so a growing feed could postpone the pause indefinitely; standalone paragraphs had no target. Regression tests failed before the fix.
+- Changes: recognize individual div feed items through nested wrappers while preserving whole semantic posts/single-content sections; add standalone text-block fallbacks. Existing toggle, matching polarity, tab state, clamping and Resume behavior remain.
+- Validation: npm run check passed 128 unit tests, build and the full automated MV3 browser suite, including article, div-feed and paragraph pause/resume fixtures; git diff --check passed.
+- Issues/next step: no affected-site URL was supplied for site-specific verification. Document scrolling limitations remain. Reload dist/ and retry the affected site with the option enabled. No manual/live-site testing.
+- Publication: current main, SSH identity from prompt 002, no new branch; fetched origin without divergence. Invalid GitHub CLI authentication uses the documented repository/commit review-note fallback.

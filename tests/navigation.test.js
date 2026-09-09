@@ -199,7 +199,7 @@ test('pagination above a long footer is revealed and revalidated only after cons
 
 function positiveFixture(f, { start = 100, end = 700, next = 800 } = {}) {
   const sibling = { matches: () => true, checkVisibility: () => true, getBoundingClientRect: () => ({ top: next - f.win.scrollY, height: 300 }) };
-  const block = { isConnected: true, parentElement: f.doc.body, nextElementSibling: sibling,
+  const block = { matches: () => true, isConnected: true, parentElement: f.doc.body, nextElementSibling: sibling,
     getBoundingClientRect: () => ({ bottom: end - f.win.scrollY }) };
   const range = { startContainer: { parentElement: { closest: () => block } },
     getClientRects: () => [{ top: start - f.win.scrollY, bottom: start + 20 - f.win.scrollY, left: 10, right: 100, width: 90, height: 20 }] };

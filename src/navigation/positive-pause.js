@@ -1,9 +1,20 @@
 const CONTENT = 'article, [role="article"], section, div';
 
-// Prefer a whole semantic post/section over its internal layout divs.
+// A semantic post stays whole, but a section can also be a feed containing
+// independent div posts. Do not let that feed's growing bottom defer the pause.
 export function positiveContent(range) {
   const element = range.startContainer.parentElement;
-  return element?.closest('article, [role="article"], section') || element?.closest('div');
+  const semantic = element?.closest('article, [role="article"], section');
+  const block = element?.closest(CONTENT);
+  if (semantic?.matches('article, [role="article"]')) return semantic;
+  if (semantic) {
+    let item = null;
+    for (let node = block; node && node !== semantic; node = node.parentElement) {
+      if (node.matches(CONTENT) && [...node.parentElement.children].some(sibling => sibling !== node && sibling.matches(CONTENT))) item = node;
+    }
+    return item || semantic;
+  }
+  return block || element?.closest('p, li, blockquote, h1, h2, h3, h4, h5, h6');
 }
 
 export class PositivePause {
