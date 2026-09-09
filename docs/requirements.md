@@ -189,3 +189,7 @@ Settings configures a global set of auto-pause colors, persisted across restarts
 ## Color-selection persistence — prompt 034
 
 Auto-pause checkbox changes and custom-color additions persist immediately through serialized color-only settings updates. Newly opened views restore exactly the saved selection, including none and custom colors. Eyeball and AI settings saves must not overwrite that palette with an older draft. Rapid changes save in order; failures restore the last acknowledged selection and display an error.
+
+## URL visit tracking
+
+Optional **Track URL visits**, off by default, counts subsequent top-level HTTP/HTTPS visits independently of highlighting. **Per session** keeps browser-session history; **All time** persists until cleared. Modes retain separate histories. Both popup and sidebar show the current URL count and a searchable URL history. Turning tracking off stops recording and retains history; **Clear URL history** clears both modes after confirmation. Readable URLs and counts stay local and never enter AI requests or profile backups. See [URL visit tracking](../README.md#url-visit-tracking) for exact visit semantics and storage limits.

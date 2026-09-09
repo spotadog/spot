@@ -1,3 +1,4 @@
+import { visitService } from './visits.js';
 import { resumeCommand } from './commands.js';
 import { navigationService } from './navigation.js';
 import { fingerprintHistory } from '../storage/count-history.js';
@@ -7,6 +8,7 @@ import { suggestKeywords } from '../services/ai.js';
 import { exportProfiles, parseImport, mergeProfiles } from '../profiles/transfer.js';
 const store = createStore();
 const navigate = navigationService();
+const visits = visitService();
 chrome.commands.onCommand.addListener(resumeCommand(chrome, navigate));
 async function applyDisplay(sidebar) {
   // Global options intentionally omit tabId so every tab uses the saved mode.
@@ -70,6 +72,7 @@ async function handle(message, sender) {
   if (message.type === 'scan.get') return scanningState(await store.read());
   const trusted = sender.id === chrome.runtime.id && sender.url?.startsWith(chrome.runtime.getURL(''));
   if (!trusted) throw new Error('This action is only available in Spot a Dog.');
+  if (message.type.startsWith('visits.')) return visits(message);
   if (message.type === 'profiles.export') return exportProfiles((await store.read()).profiles, message.scope, message.id);
   if (message.type === 'profiles.import') {
     const imported = parseImport(message.text, message.scope);
@@ -155,7 +158,7 @@ async function handle(message, sender) {
   return savedProfileId ? { id: savedProfileId } : true;
 }
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
-  if (!message?.type || ['state.changed', 'ui.changed', 'scroll.changed', 'scroll.ui.changed'].includes(message.type)) return;
+  if (!message?.type || ['state.changed', 'ui.changed', 'scroll.changed', 'scroll.ui.changed', 'visits.changed'].includes(message.type)) return;
   handle(message, sender).then(data => respond({ ok: true, data }), error => respond({ ok: false, error: error.message || 'Spot a Dog could not complete this action.' }));
   return true;
 });

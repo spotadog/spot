@@ -1,3 +1,4 @@
+import { checkVisits } from './visits.mjs';
 import { checkIndependentKeywordSaving } from './independent-keyword-saving.mjs';
 import { checkKeywordColors } from './keyword-colors.mjs';
 import { checkAutoScroll, checkPositivePause } from './auto-scroll.mjs';
@@ -670,6 +671,7 @@ try {
   await checkAutoScroll(context, criteriaPanel, `http://127.0.0.1:${server.address().port}`);
   await checkPositivePause(context, criteriaPanel, `http://127.0.0.1:${server.address().port}`);
   await checkKeywordColors(context, criteriaPanel, id, `http://127.0.0.1:${server.address().port}`);
+  const visitedURL = await checkVisits(context, criteriaPanel, id, `http://127.0.0.1:${server.address().port}`);
   // A genuinely fresh browser context must not restore transient scrolling sessions.
   await criteriaPanel.evaluate(async () => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -683,6 +685,12 @@ try {
   const colorProfiles = await freshWorker.evaluate(async () => (await chrome.storage.local.get('spotadog.state'))['spotadog.state'].profiles.filter(p => p.name.startsWith('Colors ')));
   assert.equal(colorProfiles.length, 2);
   for (const profile of colorProfiles) assert.deepEqual(profile.positiveKeywords.map(k => k.color), ['#8fc9ff', '#abcdef']);
+  const visitsAfterRestart = await freshWorker.evaluate(async () => ({
+    local: (await chrome.storage.local.get('spotadog.visits.history.v1'))['spotadog.visits.history.v1'],
+    session: (await chrome.storage.session.get('spotadog.visits.history.v1'))['spotadog.visits.history.v1']
+  }));
+  assert.equal(visitsAfterRestart.local.entries[visitedURL], 1);
+  assert.equal(visitsAfterRestart.session, undefined);
   assert.deepEqual(errors, []);
   console.log('Browser checks passed: real MV3 loading, profile CRUD, matching/exclusions, dynamic content, toggles, settings, mocked AI review, safe rendering, popup, persistence across browser restart, profile transfers/failures, and repeated extension reloads.');
 } finally {

@@ -272,3 +272,11 @@ Prompt 002 is the repository's only publication workflow: current `main` branch,
 - Publication: existing main, SSH identity from prompt 002, no new branch; origin fetched without divergence. Invalid GitHub CLI authentication uses the documented repository/commit review-note fallback.
 - Next step: reload dist/ and verify automatic color-save feedback and reopened selections. No manual/live-site tests or external AI calls.
 - Final validation: npm run check passed 145 unit tests, build and the complete automated MV3 browser suite; git diff --check passed. No known automated failures remain.
+
+## URL visit tracking — prompt 035
+
+- Request: optional URL visit counts with per-session/all-time modes and clearable history; complete prompt saved before implementation.
+- Changes: shared popup/sidebar toggle, persisted mode, current URL count, searchable history and confirmed clear of both modes. Browser navigation events feed a separate serialized storage adapter; local/session histories remain independent of keyword counting, highlights, profile backups and AI requests. Added webNavigation permission and documented local readable-URL storage and visit semantics.
+- Validation: npm run check passed 151 unit tests, build and the complete automated MV3 browser suite. New coverage includes concurrency, disabled behavior, reload/route counting, deduplication, failures, mode isolation, clearing and real browser restart persistence/reset. git diff --check passed; no manual/live-site tests or external AI calls.
+- Limits/next step: browser storage quotas apply; no automatic eviction. The first route event counts if no preceding navigation is known. Reload dist/, accept the added permission if prompted, and enable Track URL visits in either view.
+- Publication: existing main, no new branch, SSH identity from prompt 002; origin fetched without divergence. Invalid GitHub CLI authentication uses the documented repository/commit review-note fallback.

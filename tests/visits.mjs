@@ -1,0 +1,65 @@
+import assert from 'node:assert/strict';
+
+export async function checkVisits(context, panel, id, base) {
+  await panel.goto(`chrome-extension://${id}/popup/index.html`);
+  await panel.waitForFunction(() => !document.querySelector('#visits-enabled').disabled);
+  assert.equal(await panel.locator('#visits-enabled').isChecked(), false);
+  const site = await context.newPage();
+  const url = `${base}/url-visits`;
+  const read = () => panel.evaluate(async () => (await chrome.runtime.sendMessage({ type: 'visits.get' })).data);
+  const waitCount = async (url, count) => {
+    await panel.waitForFunction(async ({ url, count }) => {
+      const response = await chrome.runtime.sendMessage({ type: 'visits.get' });
+      return (response.data.entries.find(entry => entry.url === url)?.count ?? 0) === count;
+    }, { url, count });
+  };
+  await site.goto(url);
+  assert.deepEqual((await read()).entries, []);
+  await panel.locator('#visits-enabled').check();
+  await panel.getByText('URL tracking saved.', { exact: true }).waitFor();
+  assert.deepEqual((await read()).entries, [], 'enabling does not backfill open tabs');
+  await site.reload();
+  await waitCount(url, 1);
+  await site.reload();
+  await waitCount(url, 2);
+  await site.evaluate(() => history.pushState({}, '', '#route'));
+  await waitCount(`${url}#route`, 1);
+  await site.evaluate(() => history.replaceState({ changed: true }, '', location.href));
+  await site.reload();
+  await waitCount(`${url}#route`, 2);
+  await panel.locator('#visits-details summary').click();
+  await panel.locator('#visits-search').fill('#route');
+  await panel.locator('#visits-history').getByText(`${url}#route`, { exact: true }).waitFor();
+  assert.equal(await panel.locator('#visits-history p').count(), 1);
+  await panel.locator('#visits-enabled').uncheck();
+  await panel.getByText('URL tracking saved.', { exact: true }).waitFor();
+  await site.reload();
+  assert.equal((await read()).entries.find(entry => entry.url === `${url}#route`).count, 2);
+  await panel.goto(`chrome-extension://${id}/sidepanel/index.html`);
+  await panel.waitForFunction(() => !document.querySelector('#visits-enabled').disabled);
+  assert.equal(await panel.locator('#visits-enabled').isChecked(), false);
+  await panel.locator('#visits-mode').selectOption('allTime');
+  await panel.getByText('URL tracking mode saved.', { exact: true }).waitFor();
+  assert.deepEqual((await read()).entries, []);
+  await panel.locator('#visits-enabled').check();
+  await panel.getByText('URL tracking saved.', { exact: true }).waitFor();
+  await site.goto(url);
+  await waitCount(url, 1);
+  panel.once('dialog', dialog => dialog.accept());
+  await panel.locator('#visits-clear').click();
+  await panel.getByText('URL visit history cleared.', { exact: true }).waitFor();
+  assert.deepEqual((await read()).entries, []);
+  await panel.locator('#visits-mode').selectOption('session');
+  await panel.getByText('URL tracking mode saved.', { exact: true }).waitFor();
+  assert.deepEqual((await read()).entries, [], 'clear removed both histories');
+  await site.reload();
+  await waitCount(url, 1);
+  await panel.locator('#visits-mode').selectOption('allTime');
+  await panel.getByText('URL tracking mode saved.', { exact: true }).waitFor();
+  await site.reload();
+  await waitCount(url, 1);
+  await panel.locator('#visits-enabled').uncheck();
+  await panel.getByText('URL tracking saved.', { exact: true }).waitFor();
+  await site.close();
+  return url;
+}

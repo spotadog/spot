@@ -1,3 +1,4 @@
+import { wireVisits } from '../ui/visits.js';
 import { wireAutoScroll } from '../ui/auto-scroll.js';
 import { providers } from '../services/models.js';
 import { wordTabs } from '../ui/word-tabs.js';
@@ -316,3 +317,5 @@ $('#import-file').addEventListener('change', async () => {
 });
 
 wireAutoScroll();
+
+wireVisits();
