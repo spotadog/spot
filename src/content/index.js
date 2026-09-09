@@ -9,7 +9,7 @@ const navigator = new AutoNavigator(window, async (type, payload) => {
   const response = await chrome.runtime.sendMessage({ type, ...payload });
   if (!response?.ok) throw Error('Scrolling unavailable');
   return response.data;
-}, undefined, () => scanner.highlighter.positiveRanges);
+}, undefined, (colors) => colors === undefined ? scanner.highlighter.positiveRanges : scanner.highlighter.positiveRangesForColors(colors));
 let receivedUpdate = false, disposed = false;
 function update(state) {
   try { navigator.configure(state); scanner.update(state); return { ok: true }; }

@@ -1,11 +1,11 @@
-import { eyeballLevel } from './preferences.js';
+import { eyeballLevel, autoPauseColors } from './preferences.js';
 import { PositivePause, positiveAtEyeball } from './positive-pause.js';
 import { running } from './state.js';
 import { nextPage } from './pagination.js';
 // All movement uses current scrollY; nothing restores or continually enforces a saved position.
 export class AutoNavigator {
   constructor(win, send, findNext = nextPage, positiveRanges = () => []) {
-    this.eyeballLevel = 50;
+    this.eyeballLevel = 50; this.autoPauseColors = autoPauseColors();
     this.positiveRanges = positiveRanges; this.positivePause = new PositivePause();
     this.win = win; this.doc = win.document; this.send = send; this.findNext = findNext;
     this.state = { enabled: false, paused: false, revision: -1 }; this.epoch = 0;
@@ -22,7 +22,10 @@ export class AutoNavigator {
     win.addEventListener('popstate', this.onHistory);
     this.hello(this.navigationKind());
   }
-  configure(preferences) { this.eyeballLevel = eyeballLevel(preferences?.eyeballLevel); }
+  configure(preferences) {
+    this.eyeballLevel = eyeballLevel(preferences?.eyeballLevel);
+    this.autoPauseColors = autoPauseColors(preferences?.autoPauseColors);
+  }
   navigationKind() {
     const type = this.win.performance.getEntriesByType('navigation')[0]?.type;
     return type === 'back_forward' ? 'history' : type === 'reload' ? 'reload' : 'navigate';
@@ -91,7 +94,7 @@ export class AutoNavigator {
     const root = this.doc.scrollingElement;
     if (!root) { this.pause('No scrollable content'); return; }
     if (!this.state.pending && !this.busy) {
-      const ranges = this.state.pauseAfterPositive || this.state.slowOnPositive ? this.positiveRanges() : [];
+      const ranges = this.state.slowOnPositive ? this.positiveRanges() : this.state.pauseAfterPositive ? this.positiveRanges(this.autoPauseColors) : [];
       const slow = this.state.slowOnPositive && positiveAtEyeball(this.win, ranges, this.eyeballLevel);
       const speed = this.state.speed * (slow ? 0.25 : 1);
       this.distance = (this.distance ?? 0) + speed * Math.min(time - this.lastFrame, 100) / 1000;

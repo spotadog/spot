@@ -181,3 +181,7 @@ The slowdown alternative uses one-quarter of the selected speed while a positive
 ## Auto Scroll Resume hotkey — prompt 032
 
 Alt+Shift+R (Option+Shift+R on Mac) performs the same active-tab action as Resume, preserving scroll position, speed and keyword modes. The command works without an open popup/sidebar, never enables disabled scrolling or pauses running scrolling, and is configurable through Chrome extension shortcut settings. Unsupported/closed/missing tabs are handled safely.
+
+## Auto-pause color selection — prompt 033
+
+Settings configures a global set of auto-pause colors, persisted across restarts. Only highlighted positive matches whose assigned/resolved color exactly matches a selected normalized hex color can trigger the existing eyeball-level pause. The six presets are initially selected; custom colors can be added. An empty selection prevents keyword-triggered pauses. Unselected keywords retain highlighting; slowdown, Resume and navigation safeguards retain their current behavior.

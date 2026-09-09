@@ -44,7 +44,7 @@ For manual acceptance, check the pinned icon at normal and high-DPI display scal
 
 - Multiple named profiles with stable IDs, enabled states, and creation/update timestamps.
 - Select profiles from a dropdown in the popup or side panel; view and search their keywords, use Edit for profile details, or add/edit/remove individual keywords directly.
-- Optional [Auto Scroll](docs/features.md#auto-scroll-and-automatic-pagination) per tab, with adjustable speed, Pause/Resume (Alt+Shift+R, or Option+Shift+R on Mac, to resume), optional pause at a configurable eyeball level or slowdown on positive-matching posts, infinite scrolling and supported automatic pagination. Tab sessions reset on browser restart.
+- Optional [Auto Scroll](docs/features.md#auto-scroll-and-automatic-pagination) per tab, with adjustable speed, Pause/Resume (Alt+Shift+R, or Option+Shift+R on Mac, to resume), optional pause at a configurable eyeball level for selected keyword colors, or slowdown on positive-matching posts, infinite scrolling and supported automatic pagination. Tab sessions reset on browser restart.
 - Global pause removes highlights and disconnects scanning observers while preserving profiles.
 - Case-insensitive literal words and phrases, repeated matches, flexible whitespace, and Unicode-aware word boundaries.
 - [17 selectable keyword match criteria](docs/keyword-match-criteria.md): word/phrase operations, word lengths, numbers, URLs, email, hashtags, mentions and advanced regex in both editors.

@@ -1,9 +1,29 @@
+import { HIGHLIGHT_COLORS, validateColor } from '../highlighting/colors.js';
+import { element } from '../ui/client.js';
 import { request, report, action } from '../ui/client.js';
 import { models, providers } from '../services/models.js';
 const $ = selector => document.querySelector(selector);
 let state;
 let draftProvider;
 const drafts = {};
+let pauseColorChoices = new Map(HIGHLIGHT_COLORS.map(color => [color.value, color.name]));
+let selectedPauseColors = new Set();
+function renderPauseColors() {
+  $('#auto-pause-colors').replaceChildren(...[...pauseColorChoices].map(([color, name]) => {
+    const label = element('label', undefined, { className: 'inline' });
+    const input = element('input', undefined, { type: 'checkbox', checked: selectedPauseColors.has(color), ariaLabel: `${name} auto-pause` });
+    input.dataset.color = color;
+    input.addEventListener('change', () => { if (input.checked) selectedPauseColors.add(color); else selectedPauseColors.delete(color); });
+    label.style.borderBottom = `3px solid ${color}`;
+    label.append(input, document.createTextNode(`${name} (${color})`));
+    return label;
+  }));
+}
+$('#add-auto-pause-color').addEventListener('click', () => {
+  const color = validateColor($('#auto-pause-custom').value);
+  if (!pauseColorChoices.has(color)) pauseColorChoices.set(color, 'Custom');
+  selectedPauseColors.add(color); renderPauseColors();
+});
 function remember() {
   if (draftProvider) drafts[draftProvider] = $('#model').value === 'custom' ? $('#custom-model').value : $('#model').value;
 }
@@ -27,6 +47,10 @@ function renderProvider() {
 }
 async function refresh() {
   state = await request('state.get');
+  selectedPauseColors = new Set(state.preferences.autoPauseColors);
+  pauseColorChoices = new Map(HIGHLIGHT_COLORS.map(color => [color.value, color.name]));
+  for (const color of selectedPauseColors) if (!pauseColorChoices.has(color)) pauseColorChoices.set(color, 'Custom');
+  renderPauseColors();
   $('#eyeball-level').value = state.preferences.eyeballLevel ?? 50;
   $('#eyeball-level-value').textContent = `${$('#eyeball-level').value}%`;
   const provider = state.preferences.provider;
@@ -41,7 +65,7 @@ $('#navigation-settings-form').addEventListener('submit', async event => {
   event.preventDefault();
   event.submitter.disabled = true;
   try {
-    await request('navigation.settings', { eyeballLevel: Number($('#eyeball-level').value) });
+    await request('navigation.settings', { eyeballLevel: Number($('#eyeball-level').value), autoPauseColors: [...selectedPauseColors] });
     report('Scrolling settings saved.');
   } catch (error) { report(error); }
   finally { event.submitter.disabled = false; }

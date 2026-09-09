@@ -95,7 +95,7 @@ async function handle(message, sender) {
     return true;
   }
   if (message.type === 'navigation.settings') {
-    await store.saveNavigationSettings({ eyeballLevel: message.eyeballLevel });
+    await store.saveNavigationSettings({ eyeballLevel: message.eyeballLevel, autoPauseColors: message.autoPauseColors });
     await broadcast();
     return true;
   }

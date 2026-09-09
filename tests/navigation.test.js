@@ -324,3 +324,29 @@ test('slowdown toggle validation and switching modes preserve independent select
   await f.set({ slowOnPositive: false }); await f.step(100);
   assert.equal(f.controller.state.pauseAfterPositive, true); assert.equal(f.controller.state.paused, true);
 });
+
+test('auto-pause filters colors live without filtering the independent slowdown mode', async () => {
+  const f = fixture(); await flush(); const { range } = positiveFixture(f);
+  f.controller.positiveRanges = colors => colors === undefined || colors.includes('#123456') ? [range] : [];
+  f.controller.configure({ eyeballLevel: 50, autoPauseColors: ['#ffe077'] });
+  await f.set({ enabled: true, pauseAfterPositive: true, speed: 600 });
+  for (let i = 0; i < 5; i++) await f.step(100);
+  assert.equal(f.win.scrollY, 300); assert.equal(f.controller.state.paused, false);
+  f.controller.configure({ eyeballLevel: 50, autoPauseColors: ['#123456'] }); await f.step(100);
+  assert.equal(f.win.scrollY, 300); assert.equal(f.controller.state.paused, true);
+  await f.set({ paused: false, slowOnPositive: true });
+  f.controller.configure({ eyeballLevel: 50, autoPauseColors: [] }); await f.step(100);
+  assert.equal(f.win.scrollY, 315); assert.equal(f.controller.state.paused, false);
+  f.controller.dispose();
+});
+
+test('removing a selected color before eyeball level cancels its upcoming pause', async () => {
+  const f = fixture(); await flush(); const { range } = positiveFixture(f);
+  f.controller.positiveRanges = colors => colors?.includes('#123456') ? [range] : [];
+  f.controller.configure({ autoPauseColors: ['#123456'] });
+  await f.set({ enabled: true, pauseAfterPositive: true, speed: 600 }); await f.step(100);
+  f.controller.configure({ autoPauseColors: [] });
+  for (let i = 0; i < 5; i++) await f.step(100);
+  assert.equal(f.win.scrollY, 360); assert.equal(f.controller.state.paused, false);
+  f.controller.dispose();
+});

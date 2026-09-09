@@ -254,3 +254,11 @@ Prompt 002 is the repository's only publication workflow: current `main` branch,
 - Publication: current main, no new branch, existing SSH identity from prompt 002; origin fetched without divergence. Invalid GitHub CLI authentication requires the documented repository/commit review-note fallback.
 - Next step: reload dist/, verify the native Resume key in Chrome, and remap it at chrome://extensions/shortcuts if desired or unassigned.
 - Final validation: npm run check passed 140 unit tests, build and the full automated MV3 browser suite; git diff --check passed. Native OS key dispatch was not manually tested.
+
+## Auto-pause color filter — prompt 033
+
+- Request: trigger automatic keyword pauses only for configured keyword colors; complete prompt saved before implementation.
+- Changes: Settings provides checked preset colors plus custom additions, persisted globally through the existing navigation-settings adapter. The six presets default on; empty selections prevent keyword-triggered pauses. The highlighter maps positive ranges to resolved colors and filters them before the existing eyeball detector. Negative matches, unselected colors and removed colors cannot trigger keyword pauses; slowdown and Resume retain their behavior.
+- Validation: npm run check passed 144 unit tests, build and the full automated MV3 browser suite. Coverage includes defaults/custom normalization, negative exclusion, recoloring, cleanup, persistence, live palette changes, skipped blue posts and selected custom posts at configured reading levels, plus slowdown with no pause colors selected. git diff --check passed.
+- Issues/next step: reload dist/, select colors in Settings and Save scrolling settings; custom colors must be added explicitly. Existing unusual/nested-scroll limitations remain. No manual/live-site tests or external AI calls.
+- Publication: existing main, no new branch, existing SSH identity from prompt 002; fetched origin without divergence. Invalid GitHub CLI authentication uses the documented repository/commit review-note fallback.

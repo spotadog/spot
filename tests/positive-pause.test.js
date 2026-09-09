@@ -79,3 +79,26 @@ test('eyeball preference defaults, validates, persists and projects only the saf
   data['spotadog.state'].preferences.eyeballLevel = 'bad';
   assert.equal((await store.read()).preferences.eyeballLevel, 50);
 });
+
+import { autoPauseColors, validateAutoPauseColors, DEFAULT_AUTO_PAUSE_COLORS } from '../src/navigation/preferences.js';
+test('auto-pause palette normalizes exact hex colors, supports none, and rejects invalid writes', async () => {
+  assert.deepEqual(autoPauseColors(), [...DEFAULT_AUTO_PAUSE_COLORS]);
+  assert.deepEqual(validateAutoPauseColors(['#AB12CD', '#ab12cd', '#ffe077']), ['#ab12cd', '#ffe077']);
+  assert.deepEqual(autoPauseColors([]), []);
+  for (const value of [null, '#ffe077', ['red'], ['#fff'], [12], Array(201).fill('#ffe077')]) {
+    assert.throws(() => validateAutoPauseColors(value));
+    assert.deepEqual(autoPauseColors(value), []);
+  }
+  let data = {};
+  const area = { get: async key => ({ [key]: data[key] }), set: async values => { Object.assign(data, structuredClone(values)); } };
+  const store = createStore(area);
+  await store.saveNavigationSettings({ eyeballLevel: 65, autoPauseColors: ['#AB12CD'] });
+  assert.deepEqual((await createStore(area).read()).preferences.autoPauseColors, ['#ab12cd']);
+  assert.deepEqual(scanningState(await store.read()).autoPauseColors, ['#ab12cd']);
+  await store.saveNavigationSettings({ eyeballLevel: 25 }); // Older callers preserve the selection.
+  assert.deepEqual((await store.read()).preferences.autoPauseColors, ['#ab12cd']);
+  assert.throws(() => store.saveNavigationSettings({ eyeballLevel: 50, autoPauseColors: ['bad'] }));
+  assert.equal((await store.read()).preferences.eyeballLevel, 25);
+  await store.saveNavigationSettings({ eyeballLevel: 25, autoPauseColors: [] });
+  assert.deepEqual((await store.read()).preferences.autoPauseColors, []);
+});

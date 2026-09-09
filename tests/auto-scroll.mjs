@@ -64,7 +64,7 @@ export async function checkAutoScroll(context, panel, origin) {
 
 export async function checkPositivePause(context, panel, origin) {
   const saved = await panel.evaluate(async () => {
-    const response = await chrome.runtime.sendMessage({ type: 'profile.save', profile: { name: 'Autoplay positive fixture', positiveKeywords: [{ text: 'autoplaypositive', color: '#123456' }], negativeKeywords: ['autoplaynegative'] } });
+    const response = await chrome.runtime.sendMessage({ type: 'profile.save', profile: { name: 'Autoplay positive fixture', positiveKeywords: [{ text: 'autoplaypositive', color: '#123456' }, { text: 'autoplayblue', color: '#8fc9ff' }], negativeKeywords: ['autoplaynegative'] } });
     if (!response.ok) throw Error(response.error);
     await chrome.runtime.sendMessage({ type: 'global.set', enabled: true });
     return response.data.id;
@@ -73,6 +73,9 @@ export async function checkPositivePause(context, panel, origin) {
   await settings.goto(new URL('/options/index.html', panel.url()).href);
   await settings.waitForFunction(() => document.querySelector('#model').options.length > 0);
   assert.equal(await settings.locator('#eyeball-level').inputValue(), '50');
+  await settings.locator('#auto-pause-custom').fill('#123456');
+  await settings.getByRole('button', { name: 'Add color', exact: true }).click();
+  await settings.getByRole('checkbox', { name: 'Blue auto-pause', exact: true }).uncheck();
   const configure = async level => {
     await settings.evaluate(level => {
       const slider = document.querySelector('#eyeball-level'); slider.value = String(level); slider.dispatchEvent(new Event('input'));
@@ -91,7 +94,7 @@ export async function checkPositivePause(context, panel, origin) {
     const level = [50, 25, 75][index];
     await configure(level);
     const site = await context.newPage();
-    await site.route(`${origin}/positive-scroll`, route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><body style="margin:0"><div style="height:900px">Before matching content</div>${layout}</body>` }));
+    await site.route(`${origin}/positive-scroll`, route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><body style="margin:0"><article style="height:900px">autoplayblue</article>${layout}</body>` }));
     await site.goto(`${origin}/positive-scroll`);
     await site.bringToFront();
     const tabId = await panel.evaluate(async url => (await chrome.tabs.query({})).find(t => t.url === url).id, site.url());
@@ -110,7 +113,10 @@ export async function checkPositivePause(context, panel, origin) {
     assert.equal((await panel.evaluate(async tabId => (await chrome.runtime.sendMessage({ type: 'scroll.get', tabId })).data, tabId)).paused, false);
     await site.close();
   }
+  // An empty pause palette must not disable the independent slowdown mode.
+  for (const checkbox of await settings.locator('#auto-pause-colors input').all()) await checkbox.uncheck();
   await configure(50);
+  assert.equal(await settings.locator('#auto-pause-colors input:checked').count(), 0);
   const slowSite = await context.newPage();
   await slowSite.route(`${origin}/slow-scroll`, route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><body style="margin:0"><div style="height:900px">Ordinary content</div><article id="match" style="height:600px">autoplaypositive</article><div style="height:2500px">Ordinary content again</div></body>' }));
   await slowSite.goto(`${origin}/slow-scroll`);

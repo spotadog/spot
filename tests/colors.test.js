@@ -72,3 +72,20 @@ test('renderer replaces custom groups and styles, escapes invalid colors and cle
   assert.equal(win.CSS.highlights.size, 0);
   assert.deepEqual(renderer.positiveRanges, []);
 });
+
+test('auto-pause selects rendered positive ranges by resolved color, including legacy and custom colors', () => {
+  const win = { CSS: { highlights: new Map() }, Highlight: Set, document: {
+    createElement: () => ({ textContent: '', remove() {} }), documentElement: { append() {} }
+  } };
+  const renderer = new Highlighter(win);
+  const yellow = {}, custom = {}, negative = {}, blue = {};
+  renderer.paint([{ kind: 'positive', range: yellow }, { kind: 'positive', range: custom, color: '#AB12CD' },
+    { kind: 'negative', range: negative, color: '#ab12cd' }, { kind: 'positive', range: blue, color: '#8fc9ff' }]);
+  assert.deepEqual(renderer.positiveRangesForColors(['#ab12cd']), [custom]);
+  assert.deepEqual(renderer.positiveRangesForColors(['#ffe077', '#8fc9ff']), [yellow, blue]);
+  assert.deepEqual(renderer.positiveRangesForColors([]), []);
+  renderer.paint([{ kind: 'positive', range: custom, color: '#8fc9ff' }]);
+  assert.deepEqual(renderer.positiveRangesForColors(['#ab12cd']), []);
+  assert.deepEqual(renderer.positiveRangesForColors(['#8fc9ff']), [custom]);
+  renderer.clear(); assert.deepEqual(renderer.positiveRangesForColors(['#8fc9ff']), []);
+});

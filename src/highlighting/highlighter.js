@@ -3,11 +3,15 @@ export const HIGHLIGHT_NAME = 'spotadog-matches';
 export const NEGATIVE_HIGHLIGHT_NAME = 'spotadog-negative';
 const names = { positive: HIGHLIGHT_NAME, negative: NEGATIVE_HIGHLIGHT_NAME };
 export class Highlighter {
-  constructor(win = window) { this.win = win; this.customNames = new Set(); this.positiveRanges = []; }
+  constructor(win = window) { this.win = win; this.customNames = new Set(); this.positiveRanges = []; this.positiveColors = new Map(); }
   clearRanges() {
-    this.positiveRanges = [];
+    this.positiveRanges = []; this.positiveColors = new Map();
     for (const name of [...Object.values(names), ...this.customNames]) this.win.CSS?.highlights?.delete(name);
     this.customNames.clear();
+  }
+  positiveRangesForColors(colors) {
+    const allowed = new Set(colors);
+    return this.positiveRanges.filter(range => allowed.has(this.positiveColors.get(range)));
   }
   clear() { this.clearRanges(); this.style?.remove(); this.style = null; }
   paint(ranges) {
@@ -29,7 +33,9 @@ export class Highlighter {
       }
       this.win.CSS.highlights.set(name, highlight);
     }
-    this.positiveRanges = ranges.filter(item => item.kind === 'positive').map(item => item.range);
+    const positives = ranges.filter(item => item.kind === 'positive');
+    this.positiveRanges = positives.map(item => item.range);
+    this.positiveColors = new Map(positives.map(item => [item.range, keywordColor(item, 'positive')]));
     // Reuse unchanged rules so our own stylesheet does not trigger endless rescans.
     const css = rules.join('\n');
     if (css) {

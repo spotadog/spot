@@ -1,4 +1,4 @@
-import { eyeballLevel, validateEyeballLevel } from '../navigation/preferences.js';
+import { eyeballLevel, validateEyeballLevel, autoPauseColors, validateAutoPauseColors } from '../navigation/preferences.js';
 import { mergeCountHistory, historyTotals, countEntries } from '../matching/counts.js';
 import { initialState, DEFAULT_PREFERENCES } from '../profiles/model.js';
 import { normalizePreferences, validateSelection } from '../services/models.js';
@@ -20,7 +20,7 @@ export function createStore(area = chrome.storage.local) {
       const saved = (await area.get(STATE))[STATE];
       if (saved && saved.schemaVersion !== 1) throw new Error('Unsupported storage version. Update Spot a Dog.');
       const state = saved ?? initialState();
-      return { ...state, preferences: normalizePreferences({ ...DEFAULT_PREFERENCES, ...state.preferences, eyeballLevel: eyeballLevel(state.preferences?.eyeballLevel) }) };
+      return { ...state, preferences: normalizePreferences({ ...DEFAULT_PREFERENCES, ...state.preferences, eyeballLevel: eyeballLevel(state.preferences?.eyeballLevel), autoPauseColors: autoPauseColors(state.preferences?.autoPauseColors) }) };
     },
     update(change, credentials = {}) {
       const next = queue.then(async () => {
@@ -56,9 +56,10 @@ export function createStore(area = chrome.storage.local) {
       queue = next.catch(() => {});
       return next;
     },
-    saveNavigationSettings({ eyeballLevel: level }) {
+    saveNavigationSettings({ eyeballLevel: level, autoPauseColors: colors }) {
       validateEyeballLevel(level);
-      return this.update(state => ({ ...state, preferences: { ...state.preferences, eyeballLevel: level } }));
+      const selected = colors === undefined ? undefined : validateAutoPauseColors(colors);
+      return this.update(state => ({ ...state, preferences: { ...state.preferences, eyeballLevel: level, ...(selected === undefined ? {} : { autoPauseColors: selected }) } }));
     },
     saveSettings({ provider = 'openai', model, apiKey }) {
       validateSelection(provider, model);
@@ -78,7 +79,7 @@ export function createStore(area = chrome.storage.local) {
   };
 }
 export function scanningState(state) {
-  return { enabled: state.enabled, eyeballLevel: eyeballLevel(state.preferences?.eyeballLevel), tracking: state.preferences?.tracking === true, profiles: state.profiles.map(({ id, enabled, positiveKeywords, negativeKeywords, rules }) => ({ id, enabled, positiveKeywords, negativeKeywords, rules })) };
+  return { enabled: state.enabled, eyeballLevel: eyeballLevel(state.preferences?.eyeballLevel), autoPauseColors: autoPauseColors(state.preferences?.autoPauseColors), tracking: state.preferences?.tracking === true, profiles: state.profiles.map(({ id, enabled, positiveKeywords, negativeKeywords, rules }) => ({ id, enabled, positiveKeywords, negativeKeywords, rules })) };
 }
 
 // Runtime records belong to a browser session, never storage.local or profile backups.

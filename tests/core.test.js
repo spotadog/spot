@@ -1,3 +1,4 @@
+import { DEFAULT_AUTO_PAUSE_COLORS } from '../src/navigation/preferences.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { makeProfile, normalizeKeywords, mergeKeywords } from '../src/profiles/model.js';
@@ -113,7 +114,7 @@ test('legacy preferences gain popup default without changing profiles, model or 
   const saved = { schemaVersion: 1, enabled: false, profiles: [profile(['GPU'], ['gaming'])], preferences: { model: 'custom-model' } };
   await area.set({ 'spotadog.state': saved, 'spotadog.apiKey': 'test-placeholder' });
   const store = createStore(area);
-  assert.deepEqual(await store.read(), { ...saved, preferences: { model: 'custom-model', sidebar: false, tracking: false, eyeballLevel: 50, provider: 'openai', providerModels: { openai: 'custom-model' } } });
+  assert.deepEqual(await store.read(), { ...saved, preferences: { model: 'custom-model', sidebar: false, tracking: false, eyeballLevel: 50, autoPauseColors: [...DEFAULT_AUTO_PAUSE_COLORS], provider: 'openai', providerModels: { openai: 'custom-model' } } });
   await store.update(s => ({ ...s, preferences: { ...s.preferences, sidebar: true } }));
   assert.equal((await createStore(area).read()).preferences.sidebar, true);
   assert.deepEqual((await store.read()).profiles, saved.profiles);
