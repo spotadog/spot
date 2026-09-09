@@ -1,4 +1,4 @@
-export const defaults = () => ({ enabled: false, paused: false, speed: 120, pauseAfterPositive: false, revision: 0, documentId: null, url: '', pending: null, visited: [], reason: '' });
+export const defaults = () => ({ enabled: false, paused: false, speed: 120, pauseAfterPositive: false, slowOnPositive: false, revision: 0, documentId: null, url: '', pending: null, visited: [], reason: '' });
 export const running = state => state.enabled && !state.paused;
 export function transition(previous, action, now = Date.now()) {
   const s = structuredClone(previous);
@@ -15,6 +15,10 @@ export function transition(previous, action, now = Date.now()) {
     if (action.pauseAfterPositive !== undefined) {
       if (typeof action.pauseAfterPositive !== 'boolean') throw Error('Invalid positive keyword pause toggle.');
       s.pauseAfterPositive = action.pauseAfterPositive;
+    }
+    if (action.slowOnPositive !== undefined) {
+      if (typeof action.slowOnPositive !== 'boolean') throw Error('Invalid positive keyword slowdown toggle.');
+      s.slowOnPositive = action.slowOnPositive;
     }
     if (action.speed !== undefined) {
       if (!Number.isInteger(action.speed) || action.speed < 30 || action.speed > 600) throw Error('Choose a speed from 30 to 600 pixels per second.');

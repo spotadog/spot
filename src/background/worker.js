@@ -92,6 +92,11 @@ async function handle(message, sender) {
     await broadcast();
     return true;
   }
+  if (message.type === 'navigation.settings') {
+    await store.saveNavigationSettings({ eyeballLevel: message.eyeballLevel });
+    await broadcast();
+    return true;
+  }
   if (message.type === 'settings.save') {
     await store.saveSettings({ provider: message.provider ?? 'openai', model: message.model?.trim(), apiKey: message.apiKey });
     await broadcast();

@@ -1,3 +1,4 @@
+import { eyeballLevel } from './preferences.js';
 const CONTENT = 'article, [role="article"], section, div';
 
 // A semantic post stays whole, but a section can also be a feed containing
@@ -17,33 +18,38 @@ export function positiveContent(range) {
   return block || element?.closest('p, li, blockquote, h1, h2, h3, h4, h5, h6');
 }
 
+// Scanning already resolves positive/negative overlap and paints these ranges.
+// Inspect the whole post: its keyword can still be below the viewport when the
+// beginning of that post reaches the reading line.
+function matchingPosts(win, ranges) {
+  const posts = new Map();
+  for (const range of ranges) {
+    const post = positiveContent(range);
+    if (!post?.isConnected || posts.has(post) || !post.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
+    const rect = post.getBoundingClientRect();
+    if (rect.height <= 0 || rect.width <= 0 || rect.bottom <= 0 || rect.top >= win.innerHeight || rect.right <= 0 || rect.left >= win.innerWidth) continue;
+    posts.set(post, rect);
+  }
+  return posts;
+}
+export function positiveAtEyeball(win, ranges, level = 50) {
+  const line = win.innerHeight * eyeballLevel(level) / 100;
+  return [...matchingPosts(win, ranges).values()].some(rect => rect.top <= line && rect.bottom > line);
+}
+
 export class PositivePause {
   constructor() { this.reset(); }
   reset() { this.consumed = new WeakSet(); this.target = null; }
-  boundary(win, ranges) {
-    if (this.target && !this.target.isConnected) this.target = null;
-    if (!this.target) {
-      for (const range of ranges) {
-        const block = positiveContent(range);
-        if (!block?.isConnected || this.consumed.has(block)) continue;
-        if (![...range.getClientRects()].some(rect => rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < win.innerHeight && rect.right > 0 && rect.left < win.innerWidth)) continue;
-        this.target = block;
-        break;
-      }
+  boundary(win, ranges, level = 50) {
+    const line = win.innerHeight * eyeballLevel(level) / 100;
+    let boundary = null;
+    this.target = null;
+    for (const [post, rect] of matchingPosts(win, ranges)) {
+      if (this.consumed.has(post) || rect.bottom <= line) continue;
+      const position = Math.max(win.scrollY, win.scrollY + rect.top - line);
+      if (boundary === null || position < boundary) { boundary = position; this.target = post; }
     }
-    const block = this.target;
-    if (!block) return null;
-    // Follow siblings up the tree, skipping inline decoration and empty wrappers.
-    let next = null;
-    for (let node = block; node && node !== win.document.body && !next; node = node.parentElement) {
-      for (let sibling = node.nextElementSibling; sibling && !next; sibling = sibling.nextElementSibling) {
-        const candidate = sibling.matches(CONTENT) ? sibling : sibling.querySelector(CONTENT);
-        if (candidate?.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }) && candidate.getBoundingClientRect().height > 0) next = candidate;
-      }
-    }
-    const bottom = block.getBoundingClientRect().bottom;
-    const edge = next ? Math.max(bottom, next.getBoundingClientRect().top) : bottom;
-    return Math.min(win.scrollY + edge, Math.max(0, win.document.scrollingElement.scrollHeight - win.innerHeight));
+    return boundary === null ? null : Math.min(boundary, Math.max(0, win.document.scrollingElement.scrollHeight - win.innerHeight));
   }
   finish() {
     if (this.target) this.consumed.add(this.target);

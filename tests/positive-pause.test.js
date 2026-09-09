@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PositivePause, positiveContent } from '../src/navigation/positive-pause.js';
+import { PositivePause, positiveContent, positiveAtEyeball } from '../src/navigation/positive-pause.js';
 
 function node(tag, bottom = 900, children = []) {
   const element = { tag, isConnected: true, children,
@@ -8,28 +8,28 @@ function node(tag, bottom = 900, children = []) {
     closest(selector) { return this.matches(selector) ? this : this.parentElement?.closest(selector); },
     querySelector(selector) { for (const child of this.children) { if (child.matches(selector)) return child; const found = child.querySelector(selector); if (found) return found; } return null; },
     checkVisibility: () => true,
-    getBoundingClientRect: () => ({ top: bottom - 900, bottom, height: 900 }) };
+    getBoundingClientRect: () => ({ top: bottom - 900, bottom, height: 900, width: 900, left: 0, right: 900 }) };
   children.forEach((child, i) => { child.parentElement = element; child.nextElementSibling = children[i + 1] ?? null; child.previousElementSibling = children[i - 1] ?? null; });
   return element;
 }
 const range = element => ({ startContainer: { parentElement: element }, getClientRects: () => [{ top: 20, bottom: 40, width: 80, height: 20, left: 0, right: 80 }] });
 const win = body => ({ document: { body, scrollingElement: { scrollHeight: 6000 } }, scrollY: 0, innerWidth: 1000, innerHeight: 500 });
 
-test('div posts inside a feed section stop at the next post, not the growing feed end', () => {
+test('div posts inside a feed section pause at the reading line, not the growing feed end', () => {
   const text = node('span'), post = node('div', 900, [text]), next = node('div', 1800);
   const feed = node('section', 6000, [post, next]), body = node('body', 6000, [feed]);
   assert.equal(positiveContent(range(text)), post);
   const pause = new PositivePause();
-  assert.equal(pause.boundary(win(body), [range(text)]), 900);
+  assert.equal(pause.boundary(win(body), [range(text)]), 0);
   feed.getBoundingClientRect = () => ({ top: 0, bottom: 9000, height: 9000 });
-  assert.equal(pause.boundary(win(body), [range(text)]), 900);
+  assert.equal(pause.boundary(win(body), [range(text)]), 0);
 });
 
 test('plain paragraphs outside divs/sections still arm a keyword pause', () => {
   const text = node('span'), paragraph = node('p', 900, [text]), next = node('section', 1800);
   const body = node('body', 4000, [paragraph, next]);
   assert.equal(positiveContent(range(text)), paragraph);
-  assert.equal(new PositivePause().boundary(win(body), [range(text)]), 900);
+  assert.equal(new PositivePause().boundary(win(body), [range(text)]), 0);
 });
 
 test('semantic posts and single section layout wrappers still finish as a whole', () => {
@@ -46,8 +46,36 @@ test('nested layout wrappers select the individual feed item and resume can sele
   const feed = node('section', 6000, [node('div', 6000, [post, next])]);
   const body = node('body', 6000, [feed]), pause = new PositivePause();
   assert.equal(positiveContent(range(text)), post);
-  assert.equal(pause.boundary(win(body), [range(text)]), 900);
+  assert.equal(pause.boundary(win(body), [range(text)]), 0);
   pause.finish();
   assert.equal(pause.boundary(win(body), [range(text)]), null);
   assert.equal(positiveContent(range(next.children[0])), next);
+});
+
+test('earliest post wins despite range order; passed posts do not cause stale pauses', () => {
+  const first = node('article', 1300), second = node('article', 1350), old = node('article', 100);
+  const body = node('body', 4000, [first, second, old]);
+  const pause = new PositivePause();
+  assert.equal(pause.boundary(win(body), [range(second), range(old), range(first)]), 150);
+  assert.equal(pause.target, first);
+  assert.equal(positiveAtEyeball(win(body), [range(old)]), false);
+});
+
+import { createStore, scanningState } from '../src/storage/store.js';
+test('eyeball preference defaults, validates, persists and projects only the safe configuration', async () => {
+  let data = {};
+  const area = { get: async key => ({ [key]: data[key] }), set: async values => { Object.assign(data, values); } };
+  const store = createStore(area);
+  assert.equal((await store.read()).preferences.eyeballLevel, 50);
+  await store.saveNavigationSettings({ eyeballLevel: 70 });
+  assert.equal((await createStore(area).read()).preferences.eyeballLevel, 70);
+  assert.equal(scanningState(await store.read()).eyeballLevel, 70);
+  assert.equal('preferences' in scanningState(await store.read()), false);
+  for (const value of [0, 100, 50.5, NaN, '50', null, undefined]) assert.throws(() => store.saveNavigationSettings({ eyeballLevel: value }));
+  assert.equal((await store.read()).preferences.eyeballLevel, 70);
+  const failing = createStore({ ...area, set: async () => { throw Error('failed write'); } });
+  await assert.rejects(failing.saveNavigationSettings({ eyeballLevel: 25 }), /failed write/);
+  assert.equal((await store.read()).preferences.eyeballLevel, 70);
+  data['spotadog.state'].preferences.eyeballLevel = 'bad';
+  assert.equal((await store.read()).preferences.eyeballLevel, 50);
 });

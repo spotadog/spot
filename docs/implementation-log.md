@@ -236,3 +236,11 @@ Prompt 002 is the repository's only publication workflow: current `main` branch,
 - Validation: npm run check passed 128 unit tests, build and the full automated MV3 browser suite, including article, div-feed and paragraph pause/resume fixtures; git diff --check passed.
 - Issues/next step: no affected-site URL was supplied for site-specific verification. Document scrolling limitations remain. Reload dist/ and retry the affected site with the option enabled. No manual/live-site testing.
 - Publication: current main, SSH identity from prompt 002, no new branch; fetched origin without divergence. Invalid GitHub CLI authentication uses the documented repository/commit review-note fallback.
+
+## Eyeball-level pause and alternative slowdown — prompt 031
+
+- Request: positive-matching posts pause at an adjustable reading level, default halfway down the viewport; independent slowdown mode provides an alternative. Full prompt saved before implementation.
+- Changes: replace next-boundary stopping with clamped post-top alignment; add a persisted 10–90% eyeball-level setting (50% default) through the existing settings/storage/message layers. Add an independent per-tab slowdown toggle using quarter speed while a matching post crosses that level and normal selected speed elsewhere. Slowdown overrides automatic keyword pausing if both toggles are on, preserving both selections. Manual pause/navigation safeguards remain.
+- Validation: npm run check passed 135 unit tests, build and the complete automated MV3 suite; focused navigation tests passed with worker isolation assertions; git diff --check passed. Browser fixtures verify persisted configuration, 25/50/75% pause positions, Resume and measured slow/normal movement. No manual/live-site tests or AI calls.
+- Issues/next step: the checkout had no eyeball control, so it was added to Settings. Prior boundary behavior is superseded. Reload dist/, choose the desired reading level, and verify representative pages; existing nested-scroll/unusual-layout limitations remain.
+- Publication: current main, no new branch, existing SSH identity from prompt 002; fetched origin without divergence. Invalid GitHub CLI authentication requires the documented repository/commit review-note fallback.

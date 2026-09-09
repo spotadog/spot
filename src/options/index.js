@@ -27,6 +27,8 @@ function renderProvider() {
 }
 async function refresh() {
   state = await request('state.get');
+  $('#eyeball-level').value = state.preferences.eyeballLevel ?? 50;
+  $('#eyeball-level-value').textContent = `${$('#eyeball-level').value}%`;
   const provider = state.preferences.provider;
   $('#active-model').textContent = `Saved selection: ${providers[provider]?.name ?? 'Unsupported provider'} — ${state.preferences.model}.`;
   $('#provider').value = Object.hasOwn(providers, provider) ? provider : 'openai';
@@ -34,6 +36,16 @@ async function refresh() {
   for (const [id, info] of Object.entries(providers)) $('#provider').querySelector(`[value="${id}"]`).textContent = `${info.name}${state.configuredProviders[id] ? ' — configured' : ' — add API key'}`;
   renderProvider();
 }
+$('#eyeball-level').addEventListener('input', () => { $('#eyeball-level-value').textContent = `${$('#eyeball-level').value}%`; });
+$('#navigation-settings-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  event.submitter.disabled = true;
+  try {
+    await request('navigation.settings', { eyeballLevel: Number($('#eyeball-level').value) });
+    report('Scrolling settings saved.');
+  } catch (error) { report(error); }
+  finally { event.submitter.disabled = false; }
+});
 $('#provider').addEventListener('change', () => { remember(); renderProvider(); });
 $('#model').addEventListener('change', showCustom);
 $('#settings-form').addEventListener('submit', async event => {

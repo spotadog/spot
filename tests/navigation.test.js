@@ -62,10 +62,12 @@ test('worker authenticates top frames, scopes publications and cleans tab close/
   const ui = { id: 'extension', url: 'chrome-extension://extension/popup/index.html' };
   const content = { id: 'extension', tab: { id: 1 }, frameId: 0, documentId: 'one', url: 'https://site.test/' };
   await handle({ type: 'scroll.hello', instance: 'one' }, content);
-  await handle({ type: 'scroll.set', tabId: 1, enabled: true, pauseAfterPositive: true }, ui);
+  await handle({ type: 'scroll.set', tabId: 1, enabled: true, pauseAfterPositive: true, slowOnPositive: true }, ui);
   await assert.rejects(handle({ type: 'scroll.hello', instance: 'old' }, { ...content, documentId: 'old' }), /Page changed/);
   assert.equal((await store.read(1)).documentId, 'one');
   assert.equal((await store.read(1)).pauseAfterPositive, true);
+  assert.equal((await store.read(1)).slowOnPositive, true);
+  assert.equal((await handle({ type: 'scroll.get', tabId: 2 }, ui)).slowOnPositive, false);
   assert.equal((await handle({ type: 'scroll.get', tabId: 2 }, ui)).pauseAfterPositive, false);
   assert.equal((await handle({ type: 'scroll.get', tabId: 2 }, ui)).enabled, false);
   assert.ok(published.every(([id]) => id === 1));
@@ -197,10 +199,10 @@ test('pagination above a long footer is revealed and revalidated only after cons
   assert.equal(visible, true); assert.equal(clicks, 1);
 });
 
-function positiveFixture(f, { start = 100, end = 700, next = 800 } = {}) {
+function positiveFixture(f, { start = 400, end = start + 900, next = end } = {}) {
   const sibling = { matches: () => true, checkVisibility: () => true, getBoundingClientRect: () => ({ top: next - f.win.scrollY, height: 300 }) };
-  const block = { matches: () => true, isConnected: true, parentElement: f.doc.body, nextElementSibling: sibling,
-    getBoundingClientRect: () => ({ bottom: end - f.win.scrollY }) };
+  const block = { matches: () => true, checkVisibility: () => true, isConnected: true, parentElement: f.doc.body, nextElementSibling: sibling,
+    getBoundingClientRect: () => ({ top: start - f.win.scrollY, bottom: end - f.win.scrollY, height: end - start, width: 900, left: 0, right: 900 }) };
   const range = { startContainer: { parentElement: { closest: () => block } },
     getClientRects: () => [{ top: start - f.win.scrollY, bottom: start + 20 - f.win.scrollY, left: 10, right: 100, width: 90, height: 20 }] };
   f.win.innerWidth = 1000;
@@ -214,16 +216,16 @@ test('positive pause toggle defaults off, validates and preserves tab state thro
   assert.equal(command(s, 'set', { paused: true }).pauseAfterPositive, true);
   for (const value of [null, 1, 'true']) assert.throws(() => command(s, 'set', { pauseAfterPositive: value }));
 });
-test('highlight encounter finishes current content, clamps at next boundary, pauses once and resumes', async () => {
+test('matching post clamps at midpoint, pauses once and resumes', async () => {
   const f = fixture(); await flush(); positiveFixture(f);
   await f.set({ enabled: true, pauseAfterPositive: true, speed: 600 });
   await f.step(100); assert.equal(f.controller.state.paused, false);
   for (let i = 0; i < 20 && !f.controller.state.paused; i++) await f.step(100);
-  assert.equal(f.win.scrollY, 800); assert.equal(f.controller.state.paused, true);
+  assert.equal(f.win.scrollY, 150); assert.equal(f.controller.state.paused, true);
   assert.match(f.controller.state.reason, /Positive keyword/);
   assert.equal(f.frames.size, 0); assert.equal(f.calls.includes('scroll.next'), false);
   await f.set({ paused: false }); await f.step(100);
-  assert.equal(f.win.scrollY, 860); assert.equal(f.controller.state.paused, false);
+  assert.equal(f.win.scrollY, 210); assert.equal(f.controller.state.paused, false);
 });
 test('disabled option, offscreen positives and absent positive highlights do not trigger pauses', async () => {
   for (const mode of ['disabled', 'offscreen', 'negative']) {
@@ -246,7 +248,7 @@ test('turning the option off cancels an armed pause; detached content is discard
   }
 });
 test('final positive content pauses at reachable document end before pagination', async () => {
-  const f = fixture(); await flush(); const { block } = positiveFixture(f, { end: 2000 });
+  const f = fixture(); await flush(); const { block } = positiveFixture(f, { start: 1900, end: 2000 });
   block.nextElementSibling = null;
   await f.set({ enabled: true, pauseAfterPositive: true, speed: 600 });
   f.win.scrollY = 1480; // Encounter was already armed while reading the block.
@@ -256,11 +258,69 @@ test('final positive content pauses at reachable document end before pagination'
   assert.equal(f.calls.includes('scroll.next'), false);
 });
 
-test('armed boundary follows growing content and newly appended sections', async () => {
+test('eyeball boundary follows layout shifts before reaching the post', async () => {
   const f = fixture(); await flush(); const { block } = positiveFixture(f);
   await f.set({ enabled: true, pauseAfterPositive: true, speed: 600 }); await f.step(100);
-  block.getBoundingClientRect = () => ({ bottom: 1000 - f.win.scrollY });
+  block.getBoundingClientRect = () => ({ top: 600 - f.win.scrollY, bottom: 1500 - f.win.scrollY, height: 900, width: 900, left: 0, right: 900 });
   block.nextElementSibling.getBoundingClientRect = () => ({ top: 1100 - f.win.scrollY, height: 500 });
   for (let i = 0; i < 20 && !f.controller.state.paused; i++) await f.step(100);
-  assert.equal(f.win.scrollY, 1100); assert.equal(f.controller.state.paused, true);
+  assert.equal(f.win.scrollY, 350); assert.equal(f.controller.state.paused, true);
+});
+
+test('configured eyeball level and viewport height determine pause position', async () => {
+  for (const level of [25, 50, 75]) {
+    const f = fixture(); await flush(); positiveFixture(f);
+    f.controller.configure({ eyeballLevel: level });
+    await f.set({ enabled: true, pauseAfterPositive: true, speed: 600 });
+    for (let i = 0; i < 10 && !f.controller.state.paused; i++) await f.step(100);
+    assert.equal(f.win.scrollY, 400 - 500 * level / 100);
+    assert.equal(f.controller.state.paused, true);
+    f.controller.dispose();
+  }
+  const f = fixture(); await flush(); positiveFixture(f);
+  await f.set({ enabled: true, pauseAfterPositive: true });
+  f.win.innerHeight = 1000; await f.step(100);
+  assert.equal(f.win.scrollY, 0); assert.equal(f.controller.state.paused, true);
+});
+
+test('the matching post reaches eyeball level even when its keyword is below the viewport', async () => {
+  const f = fixture(); await flush(); const { range } = positiveFixture(f);
+  range.getClientRects = () => [{ top: 1400, bottom: 1420, width: 100, height: 20 }];
+  await f.set({ enabled: true, pauseAfterPositive: true, speed: 600 });
+  for (let i = 0; i < 10 && !f.controller.state.paused; i++) await f.step(100);
+  assert.equal(f.win.scrollY, 150); assert.equal(f.controller.state.paused, true);
+});
+
+test('slowdown is independent, overrides automatic pause, and restores the selected speed', async () => {
+  for (const pauseAfterPositive of [false, true]) {
+    const f = fixture(); await flush(); positiveFixture(f, { start: 100, end: 700 });
+    await f.set({ enabled: true, slowOnPositive: true, pauseAfterPositive, speed: 400 });
+    await f.step(100); assert.equal(f.win.scrollY, 10); assert.equal(f.controller.state.paused, false);
+    await f.set({ speed: 600 }); await f.step(100); assert.equal(f.win.scrollY, 25);
+    f.win.scrollY = 500; await f.step(100); assert.equal(f.win.scrollY, 560);
+    assert.equal(f.controller.state.speed, 600); assert.equal(f.controller.state.paused, false);
+    await f.set({ paused: true }); assert.equal(f.frames.size, 0);
+    f.controller.dispose();
+  }
+});
+
+test('disabling slowdown immediately restores speed; removing highlights and hidden posts restore speed', async () => {
+  for (const mode of ['disabled', 'removed', 'hidden']) {
+    const f = fixture(); await flush(); const { block } = positiveFixture(f, { start: 100 });
+    await f.set({ enabled: true, slowOnPositive: true, speed: 400 }); await f.step(100);
+    if (mode === 'disabled') await f.set({ slowOnPositive: false });
+    if (mode === 'removed') f.controller.positiveRanges = () => [];
+    if (mode === 'hidden') block.checkVisibility = () => false;
+    await f.step(100); assert.equal(f.win.scrollY, 50); f.controller.dispose();
+  }
+});
+
+test('slowdown toggle validation and switching modes preserve independent selections', async () => {
+  assert.equal(defaults().slowOnPositive, false);
+  for (const slowOnPositive of [1, 'true', null]) assert.throws(() => command(defaults(), 'set', { slowOnPositive }));
+  const f = fixture(); await flush(); positiveFixture(f, { start: 100 });
+  await f.set({ enabled: true, pauseAfterPositive: true, slowOnPositive: true }); await f.step(100);
+  assert.equal(f.controller.state.paused, false);
+  await f.set({ slowOnPositive: false }); await f.step(100);
+  assert.equal(f.controller.state.pauseAfterPositive, true); assert.equal(f.controller.state.paused, true);
 });

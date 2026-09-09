@@ -12,7 +12,7 @@ const navigator = new AutoNavigator(window, async (type, payload) => {
 }, undefined, () => scanner.highlighter.positiveRanges);
 let receivedUpdate = false, disposed = false;
 function update(state) {
-  try { scanner.update(state); return { ok: true }; }
+  try { navigator.configure(state); scanner.update(state); return { ok: true }; }
   catch { scanner.stop(); return { ok: false }; }
 }
 const listener = (message, sender, respond) => {

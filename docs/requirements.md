@@ -172,6 +172,8 @@ This table remains the acceptance contract. See the implementation log for what 
 
 [Prompt 028](prompts/028-independent-keyword-saving.md) supersedes the draft-only saves and read-only keyword viewing described in prompts 009/012/014/025. Existing profiles expose keyword Edit/Save, Add, activity and confirmed Remove independently of the profile detail mode. Each row save persists immediately; profile Save/Cancel operate only on name and enabled state, preserving stored keywords and unfinished row edits. Errors retain keyword input for retry. Mutations validate against the latest stored profile and reject stale row values. New-profile creation retains its initial name-and-keywords submission. No schema migration is required.
 
-## Autoplay positive keyword pause — prompt 029
+## Autoplay keyword reading modes — prompts 029–031
 
-The per-tab Auto Scroll controls include an off-by-default Pause after positive keyword toggle. When enabled, an encountered rendered positive highlight allows its current post, section or div to finish before pausing at the next content boundary. Resume proceeds past the consumed block. Negative-only highlights do not trigger the pause; disabling the option preserves ordinary autoplay and cancels an armed pause.
+The per-tab Auto Scroll controls include independent, off-by-default Pause on positive keyword and Slow down on positive keyword toggles. A positive-matching post pauses when its top reaches the eyeball level, default 50% of the visible page height; Settings configures the globally persisted level from 10% to 90%. This supersedes the earlier pause at the next content boundary. Resume skips the consumed post.
+
+The slowdown alternative uses one-quarter of the selected speed while a positive-matching post spans the configured level, and restores normal speed on nonmatching content. It overrides automatic keyword pausing if both toggles are selected, without modifying either selection or saved speed. Negative-only highlights do not trigger these modes. Disabling both retains ordinary autoplay; manual Pause and navigation safeguards remain effective.

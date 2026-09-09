@@ -1,7 +1,7 @@
 import { validateColor } from '../highlighting/colors.js';
 import { keywordText, keywordCriterion, keywordKey, editableKeywords } from './keyword.js';
 import { validateCriteria } from '../matching/criteria.js';
-export const DEFAULT_PREFERENCES = { model: 'gpt-4o-mini', sidebar: false, tracking: false };
+export const DEFAULT_PREFERENCES = { model: 'gpt-4o-mini', sidebar: false, tracking: false, eyeballLevel: 50 };
 export function normalizeKeywords(value) {
   const items = typeof value === 'string' ? value.split(/\r?\n/) : value;
   if (!Array.isArray(items) || items.length > 200) throw new Error('Use at most 200 keywords per list.');

@@ -22,7 +22,7 @@ export function navigationService(api = chrome, store = createTabStore()) {
     if (trusted && message.type === 'scroll.set') {
       const status = await api.tabs.sendMessage(id, { type: 'page.status' }, { frameId: 0 }).catch(() => null);
       if (!status?.supported) throw Error('Auto Scroll is unavailable on this page. Reload an HTTP/HTTPS page.');
-      action = { type: 'set', enabled: message.enabled, paused: message.paused, speed: message.speed, pauseAfterPositive: message.pauseAfterPositive };
+      action = { type: 'set', enabled: message.enabled, paused: message.paused, speed: message.speed, pauseAfterPositive: message.pauseAfterPositive, slowOnPositive: message.slowOnPositive };
     } else if (content && message.type === 'scroll.hello') {
       action = { type: 'hello', documentId: sender.documentId, url: sender.url, kind: message.kind };
     } else if (content && ['scroll.next', 'scroll.progress', 'scroll.pause'].includes(message.type)) {

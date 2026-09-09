@@ -64,14 +64,29 @@ export async function checkPositivePause(context, panel, origin) {
     await chrome.runtime.sendMessage({ type: 'global.set', enabled: true });
     return response.data.id;
   });
+  const settings = await context.newPage();
+  await settings.goto(new URL('/options/index.html', panel.url()).href);
+  await settings.waitForFunction(() => document.querySelector('#model').options.length > 0);
+  assert.equal(await settings.locator('#eyeball-level').inputValue(), '50');
+  const configure = async level => {
+    await settings.evaluate(level => {
+      const slider = document.querySelector('#eyeball-level'); slider.value = String(level); slider.dispatchEvent(new Event('input'));
+    }, level);
+    await settings.getByRole('button', { name: 'Save scrolling settings', exact: true }).click();
+    await settings.getByText('Scrolling settings saved.', { exact: true }).waitFor();
+    await settings.reload();
+    await settings.waitForFunction(level => document.querySelector('#eyeball-level').value === String(level) && document.querySelector('#model').options.length > 0, level);
+  };
   const layouts = [
-    '<article style="height:900px"><div><p style="margin:0">autoplaypositive autoplaynegative</p></div></article><section id="next" style="height:1800px">Next content</section>',
-    '<section><div style="height:900px"><div><p style="margin:0">autoplaypositive autoplaynegative</p></div></div><div id="next" style="height:1800px">Next post</div></section>',
-    '<p style="height:900px;margin:0">autoplaypositive autoplaynegative</p><section id="next" style="height:1800px">Next section</section>'
+    '<article id="match" style="height:900px"><div><p style="margin:0">autoplaypositive autoplaynegative</p></div></article><section style="height:1800px">Next content</section>',
+    '<section><div id="match" style="height:900px"><div><p style="margin:0">autoplaypositive autoplaynegative</p></div></div><div style="height:1800px">Next post</div></section>',
+    '<p id="match" style="height:900px;margin:0">autoplaypositive autoplaynegative</p><section style="height:1800px">Next section</section>'
   ];
-  for (const layout of layouts) {
+  for (const [index, layout] of layouts.entries()) {
+    const level = [50, 25, 75][index];
+    await configure(level);
     const site = await context.newPage();
-    await site.route(`${origin}/positive-scroll`, route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><body style="margin:0">${layout}</body>` }));
+    await site.route(`${origin}/positive-scroll`, route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><body style="margin:0"><div style="height:900px">Before matching content</div>${layout}</body>` }));
     await site.goto(`${origin}/positive-scroll`);
     await site.bringToFront();
     const tabId = await panel.evaluate(async url => (await chrome.tabs.query({})).find(t => t.url === url).id, site.url());
@@ -82,7 +97,7 @@ export async function checkPositivePause(context, panel, origin) {
     await panel.waitForFunction(() => document.querySelector('#scroll-positive-pause').checked && !document.querySelector('#scroll-speed').disabled);
     await panel.evaluate(() => { const speed = document.querySelector('#scroll-speed'); speed.value = '600'; speed.dispatchEvent(new Event('change')); });
     await panel.waitForFunction(() => document.querySelector('#scroll-status').textContent.includes('Positive keyword'));
-    assert.ok(Math.abs(await site.evaluate(() => document.querySelector('#next').getBoundingClientRect().top)) <= 1);
+    assert.ok(Math.abs(await site.evaluate(level => document.querySelector('#match').getBoundingClientRect().top - innerHeight * level / 100, level)) <= 1);
     const pausedY = await site.evaluate(() => scrollY);
     await site.waitForTimeout(200); assert.equal(await site.evaluate(() => scrollY), pausedY);
     await panel.evaluate(() => document.querySelector('#scroll-pause').click());
@@ -90,5 +105,31 @@ export async function checkPositivePause(context, panel, origin) {
     assert.equal((await panel.evaluate(async tabId => (await chrome.runtime.sendMessage({ type: 'scroll.get', tabId })).data, tabId)).paused, false);
     await site.close();
   }
+  await configure(50);
+  const slowSite = await context.newPage();
+  await slowSite.route(`${origin}/slow-scroll`, route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><body style="margin:0"><div style="height:900px">Ordinary content</div><article id="match" style="height:600px">autoplaypositive</article><div style="height:2500px">Ordinary content again</div></body>' }));
+  await slowSite.goto(`${origin}/slow-scroll`);
+  await slowSite.bringToFront();
+  const tabId = await panel.evaluate(async url => (await chrome.tabs.query({})).find(t => t.url === url).id, slowSite.url());
+  // Set independent options before starting, then verify their shared UI state.
+  const response = await panel.evaluate(async tabId => chrome.runtime.sendMessage({ type: 'scroll.set', tabId, enabled: true, speed: 600, pauseAfterPositive: true, slowOnPositive: true }), tabId);
+  assert.equal(response.ok, true);
+  await panel.waitForFunction(() => document.querySelector('#scroll-positive-slow').checked && document.querySelector('#scroll-positive-pause').checked);
+  await slowSite.waitForFunction(() => document.querySelector('#match').getBoundingClientRect().top < innerHeight / 2 - 30);
+  const slowStart = await slowSite.evaluate(() => scrollY);
+  await slowSite.waitForTimeout(500);
+  const slowDistance = await slowSite.evaluate(y => scrollY - y, slowStart);
+  assert.ok(slowDistance > 0 && slowDistance < 150, `Slow distance: ${slowDistance}`);
+  await slowSite.waitForFunction(() => document.querySelector('#match').getBoundingClientRect().bottom < innerHeight / 2 - 30);
+  const fastStart = await slowSite.evaluate(() => scrollY);
+  await slowSite.waitForTimeout(500);
+  const fastDistance = await slowSite.evaluate(y => scrollY - y, fastStart);
+  assert.ok(fastDistance > slowDistance * 2, `Slow/normal distances: ${slowDistance}/${fastDistance}`);
+  assert.equal((await panel.evaluate(async tabId => (await chrome.runtime.sendMessage({ type: 'scroll.get', tabId })).data, tabId)).paused, false);
+  await panel.waitForFunction(() => !document.querySelector('#scroll-positive-slow').disabled);
+  await panel.evaluate(() => document.querySelector('#scroll-positive-slow').click());
+  await panel.waitForFunction(() => !document.querySelector('#scroll-positive-slow').checked && document.querySelector('#scroll-positive-pause').checked);
+  await slowSite.close();
+  await settings.close();
   await panel.evaluate(async id => chrome.runtime.sendMessage({ type: 'profile.delete', id }), saved);
 }

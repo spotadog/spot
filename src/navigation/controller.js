@@ -1,9 +1,11 @@
-import { PositivePause } from './positive-pause.js';
+import { eyeballLevel } from './preferences.js';
+import { PositivePause, positiveAtEyeball } from './positive-pause.js';
 import { running } from './state.js';
 import { nextPage } from './pagination.js';
 // All movement uses current scrollY; nothing restores or continually enforces a saved position.
 export class AutoNavigator {
   constructor(win, send, findNext = nextPage, positiveRanges = () => []) {
+    this.eyeballLevel = 50;
     this.positiveRanges = positiveRanges; this.positivePause = new PositivePause();
     this.win = win; this.doc = win.document; this.send = send; this.findNext = findNext;
     this.state = { enabled: false, paused: false, revision: -1 }; this.epoch = 0;
@@ -20,6 +22,7 @@ export class AutoNavigator {
     win.addEventListener('popstate', this.onHistory);
     this.hello(this.navigationKind());
   }
+  configure(preferences) { this.eyeballLevel = eyeballLevel(preferences?.eyeballLevel); }
   navigationKind() {
     const type = this.win.performance.getEntriesByType('navigation')[0]?.type;
     return type === 'back_forward' ? 'history' : type === 'reload' ? 'reload' : 'navigate';
@@ -50,7 +53,7 @@ export class AutoNavigator {
     }
     if (this.disposed || this.suspended || state.revision < this.state.revision) return;
     const wasRunning = running(this.state);
-    if (!state.enabled || !state.pauseAfterPositive) this.positivePause.reset();
+    if (!state.enabled || (!state.pauseAfterPositive && !state.slowOnPositive)) this.positivePause.reset();
     this.state = state;
     if (!running(state)) this.stop();
     else if (!this.frame) {
@@ -88,14 +91,17 @@ export class AutoNavigator {
     const root = this.doc.scrollingElement;
     if (!root) { this.pause('No scrollable content'); return; }
     if (!this.state.pending && !this.busy) {
-      this.distance = (this.distance ?? 0) + this.state.speed * Math.min(time - this.lastFrame, 100) / 1000;
+      const ranges = this.state.pauseAfterPositive || this.state.slowOnPositive ? this.positiveRanges() : [];
+      const slow = this.state.slowOnPositive && positiveAtEyeball(this.win, ranges, this.eyeballLevel);
+      const speed = this.state.speed * (slow ? 0.25 : 1);
+      this.distance = (this.distance ?? 0) + speed * Math.min(time - this.lastFrame, 100) / 1000;
       const pixels = Math.floor(this.distance); this.distance -= pixels;
-      const boundary = this.state.pauseAfterPositive ? this.positivePause.boundary(this.win, this.positiveRanges()) : null;
+      const boundary = this.state.pauseAfterPositive && !this.state.slowOnPositive ? this.positivePause.boundary(this.win, ranges, this.eyeballLevel) : null;
       const movement = boundary === null ? pixels : Math.min(pixels, Math.max(0, boundary - this.win.scrollY));
       if (movement) this.win.scrollBy({ top: movement, behavior: 'instant' });
       if (boundary !== null && this.win.scrollY >= boundary - 1) {
         this.positivePause.finish();
-        this.pause('Positive keyword: next content reached');
+        this.pause('Positive keyword at eyeball level');
         return;
       }
     }
