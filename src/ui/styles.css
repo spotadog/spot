@@ -73,3 +73,5 @@ input[readonly] { background: #f6f7f3; }
 #visits-history { overflow-wrap: anywhere; }
 #visits-details { margin-bottom: 14px; }
 #visits-status { overflow-wrap: anywhere; }
+
+.visit-count { display: inline-block; font-variant-numeric: tabular-nums; transform-origin: center; }

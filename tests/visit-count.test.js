@@ -1,0 +1,64 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { build } from 'esbuild';
+import { chromium } from 'playwright';
+import { readFile } from 'node:fs/promises';
+
+test('visit count pops only on numeric changes, keeps layout stable, respects reduced motion and cleans up', async t => {
+  const bundle = await build({ entryPoints: ['src/ui/visit-count.js'], bundle: true, write: false, format: 'iife', globalName: 'fixture' });
+  const browser = await chromium.launch({ channel: 'chromium', headless: true });
+  t.after(() => browser.close());
+  const page = await browser.newPage({ reducedMotion: 'no-preference' });
+  await page.setContent('<p id="current" role="status"></p>');
+  await page.addStyleTag({ content: await readFile('src/ui/styles.css', 'utf8') });
+  await page.addScriptTag({ content: bundle.outputFiles[0].text });
+  await page.evaluate(() => {
+    window.calls = [];
+    const original = Element.prototype.animate;
+    Element.prototype.animate = function (...args) {
+      const animation = original.apply(this, args);
+      calls.push({ target: this, animation });
+      return animation;
+    };
+    window.counter = fixture.visitCount(document.querySelector('#current'));
+    window.update = (count, enabled = true) => counter.update({ supported: true, count, enabled });
+    update(1);
+  });
+  assert.equal(await page.evaluate(() => calls.length), 0, 'initial load is quiet');
+  await page.evaluate(() => { update(1); update(1, false); });
+  assert.equal(await page.evaluate(() => calls.length), 0, 'duplicate refreshes and toggle changes are quiet');
+  const before = await page.locator('#current').boundingBox();
+  await page.evaluate(() => {
+    update(2);
+    calls[0].animation.pause();
+    calls[0].animation.currentTime = 88;
+  });
+  assert.equal(await page.evaluate(() => calls.length), 1);
+  assert.equal(await page.locator('.visit-count').textContent(), '2');
+  assert.deepEqual(await page.locator('#current').boundingBox(), before, 'transform leaves surrounding layout unchanged');
+  assert.equal(await page.evaluate(() => calls[0].target.className), 'visit-count');
+  assert.equal(await page.evaluate(() => calls[0].animation.effect.getTiming().duration), 220);
+  assert.equal(await page.evaluate(() => calls[0].animation.effect.getKeyframes()[1].transform), 'scale(1.1)');
+  await page.evaluate(() => { update(2); });
+  assert.equal(await page.evaluate(() => calls.length), 1, 'unchanged refresh does not restart animation');
+  await page.evaluate(() => { update(3); calls[1].animation.pause(); });
+  assert.equal(await page.evaluate(() => calls[0].animation.playState), 'idle', 'rapid updates cancel the previous pop');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.waitForFunction(() => calls[1].animation.playState === 'idle');
+  await page.evaluate(() => update(4));
+  assert.equal(await page.locator('.visit-count').textContent(), '4');
+  assert.equal(await page.evaluate(() => calls.length), 2, 'reduced motion still updates count without animation');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.evaluate(() => update(0));
+  assert.equal(await page.evaluate(() => calls.length), 3, 'clearing the count also signals a numeric change');
+  await page.evaluate(() => counter.update({ supported: false }));
+  assert.equal(await page.locator('.visit-count').count(), 0);
+  assert.equal(await page.evaluate(() => calls[2].animation.playState), 'idle');
+  await page.evaluate(() => { update(5); });
+  assert.equal(await page.evaluate(() => calls.length), 3, 'returning from unsupported page initializes quietly');
+  await page.evaluate(() => update(6));
+  await page.evaluate(() => calls[3].animation.finish());
+  assert.equal(await page.locator('.visit-count').evaluate(node => getComputedStyle(node).transform), 'none', 'no residual scale after completion');
+  await page.evaluate(() => { update(7); counter.dispose(); });
+  assert.equal(await page.evaluate(() => calls[4].animation.playState), 'idle');
+});

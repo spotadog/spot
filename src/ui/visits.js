@@ -1,8 +1,10 @@
+import { visitCount } from './visit-count.js';
 import { request, element } from './client.js';
 
 export function wireVisits() {
   const $ = selector => document.querySelector(selector);
   const toggle = $('#visits-enabled'), mode = $('#visits-mode'), clear = $('#visits-clear');
+  const currentCount = visitCount($('#visits-current'));
   let snapshot, revision = 0, limit = 50, busy = false;
   const status = message => { const node = $('#visits-status'); if (node) node.textContent = message; };
   const controls = () => { toggle.disabled = mode.disabled = clear.disabled = busy || !snapshot; };
@@ -27,9 +29,7 @@ export function wireVisits() {
       controls();
       const url = tabs[0]?.url;
       const count = latest.entries.find(entry => entry.url === url)?.count ?? 0;
-      $('#visits-current').textContent = /^https?:\/\//.test(url ?? '')
-        ? `Current URL: ${count} recorded ${count === 1 ? 'visit' : 'visits'}${count > 1 ? ' — visited before' : ''}.${latest.enabled ? '' : ' Tracking is off.'}`
-        : 'Open an HTTP/HTTPS tab to see its visit count.';
+      currentCount.update({ supported: /^https?:\/\//.test(url ?? ''), count, enabled: latest.enabled });
       renderHistory();
     } catch (error) { if (current === revision) status(error.message); }
   }
@@ -52,6 +52,7 @@ export function wireVisits() {
   chrome.tabs.onUpdated.addListener(refresh);
   window.addEventListener('pagehide', () => {
     ++revision;
+    currentCount.dispose();
     chrome.runtime.onMessage.removeListener(changed);
     chrome.tabs.onActivated.removeListener(refresh);
     chrome.tabs.onUpdated.removeListener(refresh);

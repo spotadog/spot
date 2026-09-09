@@ -280,3 +280,11 @@ Prompt 002 is the repository's only publication workflow: current `main` branch,
 - Validation: npm run check passed 151 unit tests, build and the complete automated MV3 browser suite. New coverage includes concurrency, disabled behavior, reload/route counting, deduplication, failures, mode isolation, clearing and real browser restart persistence/reset. git diff --check passed; no manual/live-site tests or external AI calls.
 - Limits/next step: browser storage quotas apply; no automatic eviction. The first route event counts if no preceding navigation is known. Reload dist/, accept the added permission if prompted, and enable Track URL visits in either view.
 - Publication: existing main, no new branch, SSH identity from prompt 002; origin fetched without divergence. Invalid GitHub CLI authentication uses the documented repository/commit review-note fallback.
+
+## Visited count pop animation — prompt 036
+
+- Request: a subtle, smooth pop limited to the sidebar visit count when it changes; complete prompt saved before implementation.
+- Changes: shared sidebar/popup numeric span animates to 1.1 scale and back over 220 ms. Initial/unchanged values stay still, rapid updates replace the previous pop, and reduced-motion preferences suppress it. Surrounding text and layout do not animate. Visit tracking and storage semantics remain unchanged.
+- Validation: npm run check passed 152 unit tests, build and the full automated MV3 suite. New DOM/unit coverage verifies change detection, number-only targeting, stable layout, timing/scale, reduced motion, repeated updates, completion and cleanup. git diff --check passed.
+- Publication: existing main, no new branch, SSH identity from prompt 002; fetched origin without divergence. Invalid GitHub CLI authentication uses the documented repository/commit review-note fallback.
+- Issues/next step: no known automated failures; reload dist/ and revisit URLs with tracking enabled and the sidebar open. No manual/live-site testing or external AI calls.
