@@ -76,6 +76,13 @@ export async function checkPositivePause(context, panel, origin) {
   await settings.locator('#auto-pause-custom').fill('#123456');
   await settings.getByRole('button', { name: 'Add color', exact: true }).click();
   await settings.getByRole('checkbox', { name: 'Blue auto-pause', exact: true }).uncheck();
+  await settings.getByText('Auto-pause colors saved.', { exact: true }).waitFor();
+  // Opening a separate Settings view must restore exactly the auto-saved palette.
+  const reopened = await context.newPage();
+  await reopened.goto(new URL('/options/index.html', panel.url()).href);
+  await reopened.waitForFunction(() => !document.querySelector('#auto-pause-color-controls').disabled);
+  assert.deepEqual((await reopened.locator('#auto-pause-colors input:checked').evaluateAll(nodes => nodes.map(n => n.dataset.color))).sort(), ['#ffe077', '#ef6666', '#93dfab', '#c9a7ef', '#ffb877', '#123456'].sort());
+  await reopened.close();
   const configure = async level => {
     await settings.evaluate(level => {
       const slider = document.querySelector('#eyeball-level'); slider.value = String(level); slider.dispatchEvent(new Event('input'));

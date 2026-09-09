@@ -1,19 +1,39 @@
 import { HIGHLIGHT_COLORS, validateColor } from '../highlighting/colors.js';
-import { element } from '../ui/client.js';
-import { request, report, action } from '../ui/client.js';
+import { element, request, report, action } from '../ui/client.js';
 import { models, providers } from '../services/models.js';
 const $ = selector => document.querySelector(selector);
 let state;
 let draftProvider;
 const drafts = {};
 let pauseColorChoices = new Map(HIGHLIGHT_COLORS.map(color => [color.value, color.name]));
-let selectedPauseColors = new Set();
+let selectedPauseColors = new Set(), savedPauseColors = new Set();
+let colorsLoaded = false, colorRevision = 0, colorSaveQueue = Promise.resolve();
+function savePauseColors() {
+  const colors = [...selectedPauseColors], revision = ++colorRevision;
+  report('Saving auto-pause colors…');
+  // Dispatch immediately so closing this view cannot discard queued edits.
+  // The worker serializes writes; process their acknowledgments in edit order.
+  const saving = request('navigation.settings', { autoPauseColors: colors }).then(() => null, error => error);
+  colorSaveQueue = colorSaveQueue.then(async () => {
+    try {
+      const error = await saving;
+      if (error) throw error;
+      savedPauseColors = new Set(colors);
+      if (revision === colorRevision) report('Auto-pause colors saved.');
+    } catch (error) {
+      if (revision === colorRevision) {
+        selectedPauseColors = new Set(savedPauseColors); renderPauseColors();
+        report(error);
+      }
+    }
+  });
+}
 function renderPauseColors() {
   $('#auto-pause-colors').replaceChildren(...[...pauseColorChoices].map(([color, name]) => {
     const label = element('label', undefined, { className: 'inline' });
     const input = element('input', undefined, { type: 'checkbox', checked: selectedPauseColors.has(color), ariaLabel: `${name} auto-pause` });
     input.dataset.color = color;
-    input.addEventListener('change', () => { if (input.checked) selectedPauseColors.add(color); else selectedPauseColors.delete(color); });
+    input.addEventListener('change', () => { if (input.checked) selectedPauseColors.add(color); else selectedPauseColors.delete(color); savePauseColors(); });
     label.style.borderBottom = `3px solid ${color}`;
     label.append(input, document.createTextNode(`${name} (${color})`));
     return label;
@@ -22,7 +42,7 @@ function renderPauseColors() {
 $('#add-auto-pause-color').addEventListener('click', () => {
   const color = validateColor($('#auto-pause-custom').value);
   if (!pauseColorChoices.has(color)) pauseColorChoices.set(color, 'Custom');
-  selectedPauseColors.add(color); renderPauseColors();
+  selectedPauseColors.add(color); renderPauseColors(); savePauseColors();
 });
 function remember() {
   if (draftProvider) drafts[draftProvider] = $('#model').value === 'custom' ? $('#custom-model').value : $('#model').value;
@@ -47,10 +67,15 @@ function renderProvider() {
 }
 async function refresh() {
   state = await request('state.get');
-  selectedPauseColors = new Set(state.preferences.autoPauseColors);
-  pauseColorChoices = new Map(HIGHLIGHT_COLORS.map(color => [color.value, color.name]));
-  for (const color of selectedPauseColors) if (!pauseColorChoices.has(color)) pauseColorChoices.set(color, 'Custom');
-  renderPauseColors();
+  // AI/settings refreshes must not replace pending checkbox edits with an older snapshot.
+  if (!colorsLoaded) {
+    selectedPauseColors = new Set(state.preferences.autoPauseColors);
+    savedPauseColors = new Set(selectedPauseColors);
+    pauseColorChoices = new Map(HIGHLIGHT_COLORS.map(color => [color.value, color.name]));
+    for (const color of selectedPauseColors) if (!pauseColorChoices.has(color)) pauseColorChoices.set(color, 'Custom');
+    renderPauseColors(); colorsLoaded = true;
+    $('#auto-pause-color-controls').disabled = false;
+  }
   $('#eyeball-level').value = state.preferences.eyeballLevel ?? 50;
   $('#eyeball-level-value').textContent = `${$('#eyeball-level').value}%`;
   const provider = state.preferences.provider;
@@ -65,7 +90,8 @@ $('#navigation-settings-form').addEventListener('submit', async event => {
   event.preventDefault();
   event.submitter.disabled = true;
   try {
-    await request('navigation.settings', { eyeballLevel: Number($('#eyeball-level').value), autoPauseColors: [...selectedPauseColors] });
+    await colorSaveQueue;
+    await request('navigation.settings', { eyeballLevel: Number($('#eyeball-level').value) });
     report('Scrolling settings saved.');
   } catch (error) { report(error); }
   finally { event.submitter.disabled = false; }
@@ -77,6 +103,7 @@ $('#settings-form').addEventListener('submit', async event => {
   event.submitter.disabled = true;
   try {
     remember();
+    await colorSaveQueue;
     await request('settings.save', { provider: $('#provider').value, model: drafts[draftProvider], ...($('#api-key').value.trim() ? { apiKey: $('#api-key').value.trim() } : {}) });
     $('#api-key').value = '';
     report('Settings saved.');

@@ -185,3 +185,7 @@ Alt+Shift+R (Option+Shift+R on Mac) performs the same active-tab action as Resum
 ## Auto-pause color selection — prompt 033
 
 Settings configures a global set of auto-pause colors, persisted across restarts. Only highlighted positive matches whose assigned/resolved color exactly matches a selected normalized hex color can trigger the existing eyeball-level pause. The six presets are initially selected; custom colors can be added. An empty selection prevents keyword-triggered pauses. Unselected keywords retain highlighting; slowdown, Resume and navigation safeguards retain their current behavior.
+
+## Color-selection persistence — prompt 034
+
+Auto-pause checkbox changes and custom-color additions persist immediately through serialized color-only settings updates. Newly opened views restore exactly the saved selection, including none and custom colors. Eyeball and AI settings saves must not overwrite that palette with an older draft. Rapid changes save in order; failures restore the last acknowledged selection and display an error.

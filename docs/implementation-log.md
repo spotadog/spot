@@ -262,3 +262,13 @@ Prompt 002 is the repository's only publication workflow: current `main` branch,
 - Validation: npm run check passed 144 unit tests, build and the full automated MV3 browser suite. Coverage includes defaults/custom normalization, negative exclusion, recoloring, cleanup, persistence, live palette changes, skipped blue posts and selected custom posts at configured reading levels, plus slowdown with no pause colors selected. git diff --check passed.
 - Issues/next step: reload dist/, select colors in Settings and Save scrolling settings; custom colors must be added explicitly. Existing unusual/nested-scroll limitations remain. No manual/live-site tests or external AI calls.
 - Publication: existing main, no new branch, existing SSH identity from prompt 002; fetched origin without divergence. Invalid GitHub CLI authentication uses the documented repository/commit review-note fallback.
+
+## Persist auto-pause color selections — prompt 034
+
+- Request: correct selection persistence and newly opened view checkbox states; complete prompt saved before implementation.
+- Reproduction: changing a checkbox left an unsaved draft; the unrelated AI Save settings refresh restored the stored default palette. Explicit palette saves were already persisted correctly.
+- Changes: immediate color-only auto-save through the existing worker/storage queue, ordered acknowledgments and rollback/error feedback; initialize checkbox states only after loading storage. Eyeball saves preserve the latest palette and AI refreshes do not replace local selection state. Defaults, matching and pause semantics remain intact.
+- Coverage: DOM/unit regression for no-second-save persistence, AI-save isolation, empty/custom reopen, rapid changes, failed saves and stale-view saves; real MV3 fixture opens an independent Settings view and compares the exact selected palette.
+- Publication: existing main, SSH identity from prompt 002, no new branch; origin fetched without divergence. Invalid GitHub CLI authentication uses the documented repository/commit review-note fallback.
+- Next step: reload dist/ and verify automatic color-save feedback and reopened selections. No manual/live-site tests or external AI calls.
+- Final validation: npm run check passed 145 unit tests, build and the complete automated MV3 browser suite; git diff --check passed. No known automated failures remain.

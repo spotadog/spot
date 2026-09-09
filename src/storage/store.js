@@ -57,9 +57,9 @@ export function createStore(area = chrome.storage.local) {
       return next;
     },
     saveNavigationSettings({ eyeballLevel: level, autoPauseColors: colors }) {
-      validateEyeballLevel(level);
+      if (level !== undefined || colors === undefined) validateEyeballLevel(level);
       const selected = colors === undefined ? undefined : validateAutoPauseColors(colors);
-      return this.update(state => ({ ...state, preferences: { ...state.preferences, eyeballLevel: level, ...(selected === undefined ? {} : { autoPauseColors: selected }) } }));
+      return this.update(state => ({ ...state, preferences: { ...state.preferences, ...(level === undefined ? {} : { eyeballLevel: level }), ...(selected === undefined ? {} : { autoPauseColors: selected }) } }));
     },
     saveSettings({ provider = 'openai', model, apiKey }) {
       validateSelection(provider, model);
