@@ -193,3 +193,7 @@ Auto-pause checkbox changes and custom-color additions persist immediately throu
 ## URL visit tracking
 
 Optional **Track URL visits**, off by default, counts subsequent top-level HTTP/HTTPS visits independently of highlighting. **Per session** keeps browser-session history; **All time** persists until cleared. Modes retain separate histories. Both popup and sidebar show the current URL count and a searchable URL history. Turning tracking off stops recording and retains history; **Clear URL history** clears both modes after confirmation. Readable URLs and counts stay local and never enter AI requests or profile backups. See [URL visit tracking](../README.md#url-visit-tracking) for exact visit semantics and storage limits.
+
+### Popup detection and repeat appearances
+
+When URL tracking is enabled, recognize browser popup windows/opener tabs and visible website dialogs/overlay candidates. Store local identity-based appearance counts separately from URL visits, sharing session/all-time modes and history clearing. Display First seen or Seen before and counts in both extension views. Avoid duplicate counts from repeated observations or delivery retries. Document heuristic identity and detection limitations; see [popup seen history](../README.md#popup-seen-history).

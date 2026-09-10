@@ -1,3 +1,4 @@
+import { checkPopups } from './popups.mjs';
 import { checkVisits } from './visits.mjs';
 import { checkIndependentKeywordSaving } from './independent-keyword-saving.mjs';
 import { checkKeywordColors } from './keyword-colors.mjs';
@@ -672,6 +673,7 @@ try {
   await checkPositivePause(context, criteriaPanel, `http://127.0.0.1:${server.address().port}`);
   await checkKeywordColors(context, criteriaPanel, id, `http://127.0.0.1:${server.address().port}`);
   const visitedURL = await checkVisits(context, criteriaPanel, id, `http://127.0.0.1:${server.address().port}`);
+  await checkPopups(context, criteriaPanel, `http://127.0.0.1:${server.address().port}`);
   // A genuinely fresh browser context must not restore transient scrolling sessions.
   await criteriaPanel.evaluate(async () => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });

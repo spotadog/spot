@@ -114,3 +114,7 @@ Limitations: the document's main scroll area is supported; nested scroll contain
 ## URL visit tracking
 
 Optional **Track URL visits**, off by default, counts subsequent top-level HTTP/HTTPS visits independently of highlighting. **Per session** keeps browser-session history; **All time** persists until cleared. Modes retain separate histories. Both popup and sidebar show the current URL count and a searchable URL history. Turning tracking off stops recording and retains history; **Clear URL history** clears both modes after confirmation. Readable URLs and counts stay local and never enter AI requests or profile backups. See [URL visit tracking](../README.md#url-visit-tracking) for exact visit semantics and storage limits.
+
+### Popup history
+
+URL tracking also records browser popup/opener-tab navigations and detected visible website overlays, with separate appearance counts and First seen/Seen before status. Popup identity prefers an item identifier or activating/destination URL. Both histories use the selected session/all-time mode and are cleared together. Detection is best effort; see [popup semantics and limits](../README.md#popup-seen-history).

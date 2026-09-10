@@ -62,6 +62,7 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 async function handle(message, sender) {
   await ready;
+  if (message.type.startsWith('popups.')) return visits(message, sender);
   if (message.type.startsWith('scroll.')) return navigate(message, sender);
   if (message.type === 'counts.record') {
     if (sender.id !== chrome.runtime.id || !sender.tab || sender.frameId !== 0 || !/^https?:\/\//.test(sender.url ?? '')) throw new Error('Invalid count source.');

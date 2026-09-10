@@ -18,6 +18,11 @@ export function wireVisits() {
     }));
     if (!entries.length) $('#visits-history').append(element('p', 'No recorded URLs.'));
     $('#visits-more').hidden = entries.length <= limit;
+    const popups = (snapshot?.popups ?? []).filter(entry => `${entry.label} ${entry.source}`.toLowerCase().includes(query));
+    $('#popup-history').replaceChildren(...popups.slice(0, limit).map(entry => element('p',
+      `${entry.kind === 'browser' ? 'Browser popup / new tab' : 'Website overlay'}: ${entry.label} — ${entry.count > 1 ? 'Seen before' : 'First seen'} · Seen ${entry.count} ${entry.count === 1 ? 'time' : 'times'}`)));
+    if (!popups.length) $('#popup-history').append(element('p', 'No recorded popups.'));
+    $('#visits-more').hidden = entries.length <= limit && popups.length <= limit;
   }
   async function refresh() {
     const current = ++revision;
@@ -42,7 +47,7 @@ export function wireVisits() {
   toggle.addEventListener('change', () => mutate('visits.configure', { enabled: toggle.checked }, 'URL tracking saved.'));
   mode.addEventListener('change', () => { limit = 50; mutate('visits.configure', { mode: mode.value }, 'URL tracking mode saved.'); });
   clear.addEventListener('click', () => {
-    if (confirm('Clear all recorded URL visits in both modes?')) mutate('visits.clear', {}, 'URL visit history cleared.');
+    if (confirm('Clear all recorded URL visits and popup appearances in both modes?')) mutate('visits.clear', {}, 'URL visit history cleared.');
   });
   $('#visits-search').addEventListener('input', () => { limit = 50; renderHistory(); });
   $('#visits-more').addEventListener('click', () => { limit += 50; renderHistory(); });

@@ -1,9 +1,11 @@
+import { wirePopups } from './popups.js';
 import { AutoNavigator } from '../navigation/controller.js';
 import { Scanner } from './scanner.js';
 import { persistCountHistory } from './count-history.js';
 // A reinjected bundle shares the extension's isolated world. Dispose its predecessor.
 const key = '__spotadogContent';
 globalThis[key]?.dispose();
+const popups = wirePopups();
 const scanner = new Scanner(document, persistCountHistory);
 const navigator = new AutoNavigator(window, async (type, payload) => {
   const response = await chrome.runtime.sendMessage({ type, ...payload });
@@ -25,6 +27,7 @@ chrome.runtime.onMessage.addListener(listener);
 globalThis[key] = { dispose() {
   disposed = true;
   navigator.dispose();
+  popups.dispose();
   scanner.stop();
   chrome.runtime.onMessage.removeListener(listener);
 } };

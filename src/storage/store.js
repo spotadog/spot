@@ -1,3 +1,4 @@
+import { fingerprint } from './count-history.js';
 import { eyeballLevel, validateEyeballLevel, autoPauseColors, validateAutoPauseColors } from '../navigation/preferences.js';
 import { mergeCountHistory, historyTotals, countEntries } from '../matching/counts.js';
 import { initialState, DEFAULT_PREFERENCES } from '../profiles/model.js';
@@ -119,7 +120,7 @@ export function createVisitStore(local = chrome.storage.local, session = chrome.
     read() { return serialize(async () => {
       const preferences = await settings();
       const saved = await history(areaFor(preferences.mode));
-      return { ...preferences, entries: Object.entries(saved.entries).map(([url, count]) => ({ url, count })) };
+      return { ...preferences, entries: Object.entries(saved.entries).map(([url, count]) => ({ url, count })), popups: Object.values(saved.popups ?? {}) };
     }); },
     configure(patch) { return serialize(async () => {
       if (patch.enabled !== undefined && typeof patch.enabled !== 'boolean') throw new Error('Invalid URL tracking toggle.');
@@ -128,6 +129,24 @@ export function createVisitStore(local = chrome.storage.local, session = chrome.
       await local.set({ [settingsKey]: { ...previous,
         ...(patch.enabled === undefined ? {} : { enabled: patch.enabled }),
         ...(patch.mode === undefined ? {} : { mode: patch.mode }) } });
+    }); },
+    popupSettings() { return serialize(settings); },
+    recordPopup({ kind, identity, label, source, token }) { return serialize(async () => {
+      const preferences = await settings();
+      if (!preferences.enabled) return { recorded: false };
+      if (!['browser', 'overlay'].includes(kind) || ![identity, label, source, token].every(value => typeof value === 'string' && value.length > 0 && value.length <= 4096) || !/^https?:\/\//.test(source)) throw new Error('Invalid popup observation.');
+      const area = areaFor(preferences.mode), saved = await history(area);
+      const id = await fingerprint(`${kind}:${identity}`);
+      const eventId = await fingerprint(token);
+      const previous = saved.popups?.[id];
+      if (saved.popupEvents?.[eventId]) return { recorded: true };
+      const count = (previous?.count ?? 0) + 1;
+      if (!Number.isSafeInteger(count)) throw new Error('Popup count limit reached. Clear history to continue.');
+      await area.set({ [historyKey]: { ...saved,
+        popups: { ...saved.popups, [id]: { id, kind, label, source, count } },
+        popupEvents: { ...saved.popupEvents, [eventId]: true }
+      } });
+      return { recorded: true };
     }); },
     record(event, kind) { return serialize(async () => {
       const preferences = await settings();
@@ -141,6 +160,7 @@ export function createVisitStore(local = chrome.storage.local, session = chrome.
       const count = saved.entries[event.url] ?? 0;
       if (!Number.isSafeInteger(count + 1)) throw new Error('URL visit count limit reached. Clear URL history to continue.');
       await area.set({ [historyKey]: {
+        ...saved,
         entries: { ...saved.entries, [event.url]: count + 1 },
         tabs: { ...saved.tabs, [event.tabId]: { url: event.url, documentId: event.documentId, timeStamp: event.timeStamp } }
       } });

@@ -70,7 +70,7 @@ input[readonly] { background: #f6f7f3; }
 
 .color-custom { display: flex; align-items: center; gap: 8px; }
 
-#visits-history { overflow-wrap: anywhere; }
+#visits-history, #popup-history { overflow-wrap: anywhere; }
 #visits-details { margin-bottom: 14px; }
 #visits-status { overflow-wrap: anywhere; }
 

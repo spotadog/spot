@@ -12,7 +12,7 @@ const visit = (timeStamp, url = 'https://example.test/', tabId = 1) => ({ frameI
 const count = async store => (await store.read()).entries[0]?.count ?? 0;
 test('URL tracking defaults off, ignores disabled visits and preserves history when disabled', async () => {
   const local = area(), session = area(), store = createVisitStore(local, session);
-  assert.deepEqual(await store.read(), { enabled: false, mode: 'session', entries: [] });
+  assert.deepEqual(await store.read(), { enabled: false, mode: 'session', entries: [], popups: [] });
   await store.record(visit(1), 'committed');
   assert.deepEqual(session.data, {});
   await store.configure({ enabled: true });
@@ -92,7 +92,7 @@ test('tab cleanup preserves counts; adapter does not touch profiles, keyword cou
 function event() { const listeners = []; return { addListener(fn) { listeners.push(fn); }, async emit(value) { await Promise.all(listeners.map(fn => fn(value))); } }; }
 test('navigation service registers committed and route events and publishes saved changes', async () => {
   const store = createVisitStore(area(), area()), messages = [];
-  const api = { webNavigation: { onCommitted: event(), onHistoryStateUpdated: event(), onReferenceFragmentUpdated: event() }, tabs: { onRemoved: event() }, runtime: { async sendMessage(message) { messages.push(message); } } };
+  const api = { webNavigation: { onCommitted: event(), onHistoryStateUpdated: event(), onReferenceFragmentUpdated: event() }, tabs: { onRemoved: event(), async get() { return {}; }, async query() { return []; } }, runtime: { async sendMessage(message) { messages.push(message); } } };
   const handle = visitService(api, store);
   await handle({ type: 'visits.configure', enabled: true });
   await api.webNavigation.onCommitted.emit(visit(1));
