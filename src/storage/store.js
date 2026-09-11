@@ -1,3 +1,4 @@
+import { parseScout, validateLocationSettings, scoutProjection } from '../profiles/scout.js';
 import { fingerprint } from './count-history.js';
 import { eyeballLevel, validateEyeballLevel, autoPauseColors, validateAutoPauseColors } from '../navigation/preferences.js';
 import { mergeCountHistory, historyTotals, countEntries } from '../matching/counts.js';
@@ -57,6 +58,14 @@ export function createStore(area = chrome.storage.local) {
       queue = next.catch(() => {});
       return next;
     },
+    importScout(text) {
+      const data = parseScout(text);
+      return this.update(state => ({ ...state, scoutData: data }));
+    },
+    saveLocationCheck(settings) {
+      const value = validateLocationSettings(settings);
+      return this.update(state => ({ ...state, locationCheck: value }));
+    },
     saveNavigationSettings({ eyeballLevel: level, autoPauseColors: colors }) {
       if (level !== undefined || colors === undefined) validateEyeballLevel(level);
       const selected = colors === undefined ? undefined : validateAutoPauseColors(colors);
@@ -80,7 +89,7 @@ export function createStore(area = chrome.storage.local) {
   };
 }
 export function scanningState(state) {
-  return { enabled: state.enabled, eyeballLevel: eyeballLevel(state.preferences?.eyeballLevel), autoPauseColors: autoPauseColors(state.preferences?.autoPauseColors), tracking: state.preferences?.tracking === true, profiles: state.profiles.map(({ id, enabled, positiveKeywords, negativeKeywords, rules }) => ({ id, enabled, positiveKeywords, negativeKeywords, rules })) };
+  return { locationCheck: scoutProjection(state), enabled: state.enabled, eyeballLevel: eyeballLevel(state.preferences?.eyeballLevel), autoPauseColors: autoPauseColors(state.preferences?.autoPauseColors), tracking: state.preferences?.tracking === true, profiles: state.profiles.map(({ id, enabled, positiveKeywords, negativeKeywords, rules }) => ({ id, enabled, positiveKeywords, negativeKeywords, rules })) };
 }
 
 // Runtime records belong to a browser session, never storage.local or profile backups.

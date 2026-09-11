@@ -197,3 +197,7 @@ Optional **Track URL visits**, off by default, counts subsequent top-level HTTP/
 ### Popup detection and repeat appearances
 
 When URL tracking is enabled, recognize browser popup windows/opener tabs and visible website dialogs/overlay candidates. Store local identity-based appearance counts separately from URL visits, sharing session/all-time modes and history clearing. Display First seen or Seen before and counts in both extension views. Avoid duplicate counts from repeated observations or delivery retries. Document heuristic identity and detection limitations; see [popup seen history](../README.md#popup-seen-history).
+
+## Autoplay location validation — prompt 038
+
+An optional global location check must gate positive keyword/color auto-pauses using uploaded version-1 X Profile Scout records. It must identify the enclosing post/card author from explicit metadata, require a checked record whose accountBasedIn equals the configured location, and continue for unknown/unavailable/nonmatching authors. Notes and connection/follow metadata are data only. Settings must support validated atomic replacement, clearing, persistent configuration and immediate runtime refresh. Keyword matching remains independent, storage stays in its adapter, and the check uses no AI or external requests. See README for the upload contract and supported markup.

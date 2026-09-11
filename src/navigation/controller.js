@@ -1,3 +1,4 @@
+import { locationAllowsPost } from './location-check.js';
 import { eyeballLevel, autoPauseColors } from './preferences.js';
 import { PositivePause, positiveAtEyeball } from './positive-pause.js';
 import { running } from './state.js';
@@ -5,6 +6,7 @@ import { nextPage } from './pagination.js';
 // All movement uses current scrollY; nothing restores or continually enforces a saved position.
 export class AutoNavigator {
   constructor(win, send, findNext = nextPage, positiveRanges = () => []) {
+    this.locationHandles = new Set();
     this.eyeballLevel = 50; this.autoPauseColors = autoPauseColors();
     this.positiveRanges = positiveRanges; this.positivePause = new PositivePause();
     this.win = win; this.doc = win.document; this.send = send; this.findNext = findNext;
@@ -23,6 +25,8 @@ export class AutoNavigator {
     this.hello(this.navigationKind());
   }
   configure(preferences) {
+    this.locationCheck = preferences?.locationCheck;
+    this.locationHandles = new Set(this.locationCheck?.handles ?? []);
     this.eyeballLevel = eyeballLevel(preferences?.eyeballLevel);
     this.autoPauseColors = autoPauseColors(preferences?.autoPauseColors);
   }
@@ -99,12 +103,12 @@ export class AutoNavigator {
       const speed = this.state.speed * (slow ? 0.25 : 1);
       this.distance = (this.distance ?? 0) + speed * Math.min(time - this.lastFrame, 100) / 1000;
       const pixels = Math.floor(this.distance); this.distance -= pixels;
-      const boundary = this.state.pauseAfterPositive && !this.state.slowOnPositive ? this.positivePause.boundary(this.win, ranges, this.eyeballLevel) : null;
+      const boundary = this.state.pauseAfterPositive && !this.state.slowOnPositive ? this.positivePause.boundary(this.win, ranges, this.eyeballLevel, post => locationAllowsPost(post, this.doc.location.href, this.locationCheck, this.locationHandles)) : null;
       const movement = boundary === null ? pixels : Math.min(pixels, Math.max(0, boundary - this.win.scrollY));
       if (movement) this.win.scrollBy({ top: movement, behavior: 'instant' });
       if (boundary !== null && this.win.scrollY >= boundary - 1) {
         this.positivePause.finish();
-        this.pause('Positive keyword at eyeball level');
+        this.pause(this.locationCheck?.enabled ? `Positive keyword — location verified: ${this.locationCheck.location}` : 'Positive keyword at eyeball level');
         return;
       }
     }

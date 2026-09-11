@@ -98,6 +98,12 @@ async function handle(message, sender) {
     await broadcast();
     return true;
   }
+  if (message.type === 'scout.import' || message.type === 'scout.settings') {
+    const state = message.type === 'scout.import' ? await store.importScout(message.text) : await store.saveLocationCheck(message.settings);
+    let failed = false;
+    try { failed = await broadcast(); } catch { failed = true; }
+    return { count: state.scoutData?.records.length ?? 0, warning: failed ? 'Saved, but a page could not refresh. Reload affected webpages.' : '' };
+  }
   if (message.type === 'navigation.settings') {
     await store.saveNavigationSettings({ eyeballLevel: message.eyeballLevel, autoPauseColors: message.autoPauseColors });
     await broadcast();

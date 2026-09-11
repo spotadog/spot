@@ -350,3 +350,20 @@ test('removing a selected color before eyeball level cancels its upcoming pause'
   assert.equal(f.win.scrollY, 360); assert.equal(f.controller.state.paused, false);
   f.controller.dispose();
 });
+
+test('location check refresh rejects stale authors and permits newly eligible posts before pausing', async () => {
+  const f = fixture(); await flush();
+  const { block } = positiveFixture(f, { start: 600 });
+  const header = { closest: selector => selector === '[role="link"]' ? null : block,
+    querySelectorAll: () => [{ getAttribute: () => 'https://x.com/example' }] };
+  block.querySelectorAll = selector => selector.includes('User-Name') ? [header] : [];
+  f.controller.configure({ locationCheck: { enabled: true, location: 'United States', handles: [] } });
+  await f.set({ enabled: true, pauseAfterPositive: true, speed: 600 });
+  for (let i = 0; i < 7; i++) await f.step(100);
+  assert.equal(f.controller.state.paused, false);
+  assert.ok(f.win.scrollY > 350);
+  f.controller.configure({ locationCheck: { enabled: true, location: 'United States', handles: ['example'] } });
+  await f.step(100);
+  assert.equal(f.controller.state.paused, true);
+  assert.match(f.controller.state.reason, /location verified: United States/);
+});

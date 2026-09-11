@@ -1,3 +1,4 @@
+import { SCOUT_MAX_BYTES } from '../profiles/scout.js';
 import { HIGHLIGHT_COLORS, validateColor } from '../highlighting/colors.js';
 import { element, request, report, action } from '../ui/client.js';
 import { models, providers } from '../services/models.js';
@@ -78,6 +79,9 @@ async function refresh() {
   }
   $('#eyeball-level').value = state.preferences.eyeballLevel ?? 50;
   $('#eyeball-level-value').textContent = `${$('#eyeball-level').value}%`;
+  $('#location-check-enabled').checked = state.locationCheck?.enabled ?? false;
+  $('#location-check-location').value = state.locationCheck?.location ?? '';
+  $('#scout-summary').textContent = `${state.scoutData?.records.length ?? 0} scout profiles uploaded.`;
   const provider = state.preferences.provider;
   $('#active-model').textContent = `Saved selection: ${providers[provider]?.name ?? 'Unsupported provider'} — ${state.preferences.model}.`;
   $('#provider').value = Object.hasOwn(providers, provider) ? provider : 'openai';
@@ -117,5 +121,30 @@ action($('#remove-key'), async () => {
   $('#api-key').value = '';
   report('API key removed.');
   await refresh();
+});
+$('#location-check-form').addEventListener('submit', async event => {
+  event.preventDefault(); event.submitter.disabled = true;
+  try {
+    const result = await request('scout.settings', { settings: { enabled: $('#location-check-enabled').checked, location: $('#location-check-location').value } });
+    report(result.warning || 'Location check saved.');
+  } catch (error) { report(error); }
+  finally { event.submitter.disabled = false; }
+});
+$('#scout-file').addEventListener('change', async event => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  event.target.disabled = true;
+  try {
+    if (!file.name.toLowerCase().endsWith('.json') || file.size > SCOUT_MAX_BYTES) throw Error('Choose a scout .json file of at most 5 MiB.');
+    const result = await request('scout.import', { text: await file.text() });
+    $('#scout-summary').textContent = `${result.count} scout profiles uploaded.`;
+    report(result.warning || 'Scout profiles uploaded. Location checks updated.');
+  } catch (error) { report(error); }
+  finally { event.target.value = ''; event.target.disabled = false; }
+});
+action($('#scout-clear'), async () => {
+  const result = await request('scout.import', { text: JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), records: [] }) });
+  $('#scout-summary').textContent = '0 scout profiles uploaded.';
+  report(result.warning || 'Scout profiles cleared.');
 });
 refresh().catch(report);

@@ -1,3 +1,4 @@
+import { checkScout } from './scout.mjs';
 import { checkPopups } from './popups.mjs';
 import { checkVisits } from './visits.mjs';
 import { checkIndependentKeywordSaving } from './independent-keyword-saving.mjs';
@@ -671,6 +672,7 @@ try {
   await checkPopupLayout(criteriaPanel, id);
   await checkAutoScroll(context, criteriaPanel, `http://127.0.0.1:${server.address().port}`);
   await checkPositivePause(context, criteriaPanel, `http://127.0.0.1:${server.address().port}`);
+  await checkScout(context, criteriaPanel, `http://127.0.0.1:${server.address().port}`);
   await checkKeywordColors(context, criteriaPanel, id, `http://127.0.0.1:${server.address().port}`);
   const visitedURL = await checkVisits(context, criteriaPanel, id, `http://127.0.0.1:${server.address().port}`);
   await checkPopups(context, criteriaPanel, `http://127.0.0.1:${server.address().port}`);

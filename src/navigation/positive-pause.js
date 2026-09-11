@@ -5,6 +5,8 @@ const CONTENT = 'article, [role="article"], section, div';
 // independent div posts. Do not let that feed's growing bottom defer the pause.
 export function positiveContent(range) {
   const element = range.startContainer.parentElement;
+  const userCell = element?.closest('[data-testid="UserCell"]');
+  if (userCell) return userCell;
   const semantic = element?.closest('article, [role="article"], section');
   const block = element?.closest(CONTENT);
   if (semantic?.matches('article, [role="article"]')) return semantic;
@@ -40,12 +42,12 @@ export function positiveAtEyeball(win, ranges, level = 50) {
 export class PositivePause {
   constructor() { this.reset(); }
   reset() { this.consumed = new WeakSet(); this.target = null; }
-  boundary(win, ranges, level = 50) {
+  boundary(win, ranges, level = 50, eligible = () => true) {
     const line = win.innerHeight * eyeballLevel(level) / 100;
     let boundary = null;
     this.target = null;
     for (const [post, rect] of matchingPosts(win, ranges)) {
-      if (this.consumed.has(post) || rect.bottom <= line) continue;
+      if (this.consumed.has(post) || rect.bottom <= line || !eligible(post)) continue;
       const position = Math.max(win.scrollY, win.scrollY + rect.top - line);
       if (boundary === null || position < boundary) { boundary = position; this.target = post; }
     }

@@ -118,3 +118,7 @@ Optional **Track URL visits**, off by default, counts subsequent top-level HTTP/
 ### Popup history
 
 URL tracking also records browser popup/opener-tab navigations and detected visible website overlays, with separate appearance counts and First seen/Seen before status. Popup identity prefers an item identifier or activating/destination URL. Both histories use the selected session/all-time mode and are cleared together. Detection is best effort; see [popup semantics and limits](../README.md#popup-seen-history).
+
+## Autoplay location checkbot
+
+Settings accepts version-1 X Profile Scout JSON and a target account location. An optional local author check filters positive keyword/color pauses using checked `accountBasedIn` records. Unknown/nonmatching authors keep scrolling. Upload replacement, validation, privacy, supported author markup and limits are documented in [README](../README.md#autoplay-location-checkbot).
