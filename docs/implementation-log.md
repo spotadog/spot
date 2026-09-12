@@ -323,3 +323,13 @@ Prompt 002 is the repository's only publication workflow: current `main` branch,
 - Limits/issues: no affected URL provided; live-site behavior unverified. Main-content/player scope uses documented size/geometry heuristics; iframe/shadow-root and trusted-input-only limitations remain.
 - Publication: current main over the existing SSH identity, no branch; origin fetched without divergence. Invalid GitHub CLI authentication uses the repository/commit review-note fallback.
 - Next step: reload dist/, refresh the video page, enable Automatically skip video ads and test main-video playback; provide a failing URL for site-specific follow-up.
+
+## YouPorn/MGP ad skip compatibility — prompt 041
+
+- Request: investigate the still-failing skip action on YouPorn. Complete prompt saved before implementation.
+- Evidence: inspected the site's linked MGP 9.2.1 player JavaScript. Its custom skip control cancels click and handles mouseup, and exposes a skippable readiness class. Source URL/hash and investigation details are retained in prompt 041; no site media/page content is committed.
+- Changes: MGP controls require ready/active-ad state and use one mouseup at a visible hit point. Generic buttons retain click; main-video, label, visibility and lifecycle rules remain. No speculative change to underlying-video selection.
+- Validation: regression failed before the fix and passed after; npm run check passed 167 unit tests, build and full MV3 browser suite. Fixtures use real video playback and reproduce readiness, mouseup-only action, duplicate/reuse and paused-video behavior. git diff --check passed.
+- Limits/issues: no live served-ad test; existing iframe/shadow-root and main-video heuristic limits remain. Reloading the webpage alone does not load a rebuilt extension.
+- Publication: current main over the existing SSH identity, no branch; fetched without divergence. Invalid GitHub CLI authentication uses the documented repository/commit review-note fallback.
+- Next step: reload the extension at chrome://extensions, refresh the video page and confirm the ad-skip toggle is enabled before checking a live ad.

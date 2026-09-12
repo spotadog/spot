@@ -15,6 +15,22 @@ export async function checkAdSkip(context, panel, origin) {
   await site.waitForFunction(() => clicks === 1);
   await site.waitForTimeout(600);
   assert.equal(await site.evaluate(() => clicks), 1);
+  // MGP/YouPorn uses a custom ready-state control whose desktop action is mouseup.
+  await site.evaluate(() => {
+    const old = document.querySelector('#skip'); old.hidden = true;
+    old.parentElement.classList.add('adRollRunning');
+    old.insertAdjacentHTML('afterend', '<div class="adRollContainer" style="position:absolute;inset:0"><div class="adRollSkipButton" style="position:absolute;right:20px;bottom:20px;background:white;padding:10px"><div class="adRollSkipButtonContent">Skip Ad</div></div></div>');
+    window.mgpSkips = 0;
+    const control = document.querySelector('.adRollSkipButton');
+    control.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); });
+    control.addEventListener('mouseup', () => { if (control.classList.contains('skippable')) mgpSkips++; });
+  });
+  await site.waitForTimeout(600);
+  assert.equal(await site.evaluate(() => mgpSkips), 0);
+  await site.evaluate(() => document.querySelector('.adRollSkipButton').classList.add('skippable'));
+  await site.waitForFunction(() => mgpSkips === 1);
+  await site.waitForTimeout(600);
+  assert.equal(await site.evaluate(() => mgpSkips), 1);
   await settings.reload();
   await settings.waitForFunction(() => !document.querySelector('#auto-skip-ads').disabled);
   assert.equal(await settings.locator('#auto-skip-ads').isChecked(), true);

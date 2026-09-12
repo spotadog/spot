@@ -91,3 +91,43 @@ test('ad skipper checks real visibility/hit targets, detects appearance changes 
   await page.waitForTimeout(600);
   assert.equal(await page.evaluate(() => clicks.new), undefined);
 });
+
+test('MGP ad-roll controls wait for skippable state and activate via mouseup rather than click', async t => {
+  const browser = await chromium.launch({ channel: 'chromium', headless: true }); t.after(() => browser.close());
+  const page = await browser.newPage();
+  const bundle = await build({ entryPoints: ['src/ads/skip.js'], bundle: true, write: false, format: 'iife', globalName: 'ads' });
+  await page.setContent(`<div class="adRollRunning" style="position:relative;width:800px;height:450px">
+    <video muted playsinline style="width:800px;height:450px"></video>
+    <div class="adRollContainer" style="position:absolute;inset:0">
+      <div class="adRollSkipButton" style="position:absolute;bottom:20px;right:20px;background:white;padding:10px;cursor:pointer"><div class="adRollSkipButtonContent">Skip Ad</div></div>
+    </div></div>`);
+  await page.addScriptTag({ content: bundle.outputFiles[0].text });
+  await page.evaluate(async () => {
+    const canvas = document.createElement('canvas'); canvas.width = 800; canvas.height = 450;
+    window.paint = setInterval(() => canvas.getContext('2d').fillRect(0, 0, 800, 450), 30);
+    const video = document.querySelector('video'); video.srcObject = canvas.captureStream(30); await video.play();
+    window.skips = 0; window.mouseups = 0; window.clickEvents = 0;
+    const control = document.querySelector('.adRollSkipButton');
+    // MGP's desktop adapter stops click; its action callback runs on mouseup.
+    control.addEventListener('click', event => { clickEvents++; event.stopPropagation(); event.preventDefault(); });
+    control.addEventListener('mouseup', event => {
+      if (event.button !== 0) return;
+      event.stopPropagation(); event.preventDefault(); mouseups++;
+      if (control.classList.contains('skippable')) skips++;
+    });
+    window.skipper = new ads.AdSkipper(document);
+  });
+  await page.waitForFunction(() => document.querySelector('video').currentTime > 0);
+  await page.evaluate(() => { skipper.configure(true); skipper.scan(); });
+  assert.deepEqual(await page.evaluate(() => ({ skips, mouseups, clickEvents })), { skips: 0, mouseups: 0, clickEvents: 0 });
+  await page.evaluate(() => { document.querySelector('.adRollSkipButton').classList.add('skippable'); skipper.scan(); skipper.scan(); });
+  assert.deepEqual(await page.evaluate(() => ({ skips, mouseups, clickEvents })), { skips: 1, mouseups: 1, clickEvents: 0 });
+  // A reused control must wait through the next countdown before skipping again.
+  await page.evaluate(() => { document.querySelector('.adRollSkipButton').classList.remove('skippable'); skipper.scan(); });
+  await page.evaluate(() => { document.querySelector('.adRollSkipButton').classList.add('skippable'); skipper.scan(); });
+  assert.equal(await page.evaluate(() => skips), 2);
+  await page.evaluate(() => { document.querySelector('video').pause(); document.querySelector('.adRollSkipButton').classList.remove('skippable'); skipper.scan(); });
+  await page.evaluate(() => { document.querySelector('.adRollSkipButton').classList.add('skippable'); skipper.scan(); });
+  assert.equal(await page.evaluate(() => skips), 2);
+  await page.evaluate(() => skipper.dispose());
+});

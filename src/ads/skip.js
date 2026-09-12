@@ -46,20 +46,39 @@ function matchingControl(node, doc, player) {
 }
 export function clickableSkip(node, doc, video = mainPlayingVideo(doc)) {
   if (!video || !node.isConnected || !node.matches(SELECTOR)) return false;
+  // MGP exposes a separate readiness class; its label can update after readiness.
+  const adRollControl = node.closest('.adRollSkipButton');
+  if (adRollControl && (adRollControl !== node || !node.matches('.skippable') || !node.closest('.adRollContainer') || !node.closest('.adRollRunning'))) return false;
   const player = playerFor(video, node, doc);
   if (!player || !matchingControl(node, doc, player)) return false;
   if (node.matches(':disabled') || node.closest('[inert], [aria-disabled="true"], [hidden]') || !visibleRect(node, doc)) return false;
   if (doc.defaultView.getComputedStyle(node).pointerEvents === 'none') return false;
+  return hitPoint(node, doc) !== null;
+}
+function hitPoint(node, doc) {
   for (const rect of node.getClientRects()) {
     const left = Math.max(0, rect.left), right = Math.min(doc.defaultView.innerWidth, rect.right);
     const top = Math.max(0, rect.top), bottom = Math.min(doc.defaultView.innerHeight, rect.bottom);
     if (right <= left || bottom <= top) continue;
     for (const fraction of [0.5, 0.2, 0.8]) {
-      const hit = doc.elementFromPoint(left + (right - left) * fraction, top + (bottom - top) * fraction);
-      if (hit && node.contains(hit)) return true;
+      const x = left + (right - left) * fraction, y = top + (bottom - top) * fraction;
+      const hit = doc.elementFromPoint(x, y);
+      if (hit && node.contains(hit)) return { x, y };
     }
   }
-  return false;
+  return null;
+}
+function activateSkip(node, doc) {
+  if (node.matches('.adRollSkipButton.skippable')) {
+    // MGP's desktop control handles mouseup; click only cancels propagation.
+    // Dispatch only its activation event, avoiding two actions on generic controls.
+    const point = hitPoint(node, doc);
+    if (!point) return;
+    node.dispatchEvent(new doc.defaultView.MouseEvent('mouseup', {
+      bubbles: true, cancelable: true, view: doc.defaultView,
+      button: 0, buttons: 0, clientX: point.x, clientY: point.y
+    }));
+  } else node.click();
 }
 export class AdSkipper {
   constructor(doc, clicked = new Set()) {
@@ -98,7 +117,7 @@ export class AdSkipper {
       if (!this.enabled || this.disposed) break;
       if (this.clicked.has(node) || !clickableSkip(node, this.doc)) continue;
       this.clicked.add(node);
-      node.click();
+      activateSkip(node, this.doc);
     }
   }
   stop() {

@@ -209,3 +209,7 @@ Provide a persisted on/off setting, initially off, to click visible and clickabl
 ## Video-aware ad skip matching — prompt 040
 
 Supersedes prompt 039's exact-label-only behavior. Require a prominent visible main video with active playback before matching controls associated with its player. Support common ad-skip phrases and custom ad-skip identifiers, including bare Skip only with explicit ad context. Exclude unrelated skip actions, countdowns, off-player controls, paused/hidden videos and small previews. Retain the persisted toggle, visibility/hit testing, duplicate protection and lifecycle cleanup. Document the main-video and player-association heuristics.
+
+## MGP ad-roll compatibility — prompt 041
+
+For an MGP adRollSkipButton, require its skippable readiness class and active adRollContainer/adRollRunning ancestry in addition to existing playback, player association and hit testing. Activate its desktop mouseup handler once; do not issue an additional click. Do not activate the nested label separately. Countdown/readiness loss rearms a reused control only after it is eligible again. Generic controls retain normal click activation.
