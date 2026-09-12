@@ -122,3 +122,7 @@ URL tracking also records browser popup/opener-tab navigations and detected visi
 ## Autoplay location checkbot
 
 Settings accepts version-1 X Profile Scout JSON and a target account location. An optional local author check filters positive keyword/color pauses using checked `accountBasedIn` records. Unknown/nonmatching authors keep scrolling. Upload replacement, validation, privacy, supported author markup and limits are documented in [README](../README.md#autoplay-location-checkbot).
+
+## Automatic ad skipping
+
+An off-by-default Settings toggle automatically saves across all tabs and restarts. When enabled, visible, enabled and unobstructed “Skip this ad” buttons are clicked once per observed clickable appearance. DOM observation and periodic checks cover dynamic buttons; disabling cancels pending work. Independent of matching and Auto Scroll. See [README](../README.md#automatically-skip-ads) for labels, lifecycle and supported-page limits.

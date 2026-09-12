@@ -11,7 +11,7 @@ function fixture() {
     update(state) { if (state.fail) throw Error('paint'); this.updates.push(state); }
     stop() { this.stops++; }
   }
-  const context = vm.createContext({ wirePopups: () => ({ dispose() {} }), AutoNavigator: class { configure() {} dispose() {} }, window: {}, Scanner, document: {}, persistCountHistory() {}, chrome: { runtime: {
+  const context = vm.createContext({ AdSkipper: class { configure() {} dispose() {} }, wirePopups: () => ({ dispose() {} }), AutoNavigator: class { configure() {} dispose() {} }, window: {}, Scanner, document: {}, persistCountHistory() {}, chrome: { runtime: {
     onMessage: { addListener(fn) { listeners.add(fn); }, removeListener(fn) { listeners.delete(fn); } },
     sendMessage() { return new Promise((resolve, reject) => pending.push({ resolve, reject })); }
   } } });

@@ -201,3 +201,7 @@ When URL tracking is enabled, recognize browser popup windows/opener tabs and vi
 ## Autoplay location validation — prompt 038
 
 An optional global location check must gate positive keyword/color auto-pauses using uploaded version-1 X Profile Scout records. It must identify the enclosing post/card author from explicit metadata, require a checked record whose accountBasedIn equals the configured location, and continue for unknown/unavailable/nonmatching authors. Notes and connection/follow metadata are data only. Settings must support validated atomic replacement, clearing, persistent configuration and immediate runtime refresh. Keyword matching remains independent, storage stays in its adapter, and the check uses no AI or external requests. See README for the upload contract and supported markup.
+
+## Automatic ad skipping — prompt 039
+
+Provide a persisted on/off setting, initially off, to click visible and clickable “Skip this ad” buttons automatically. Require exact normalized button labels, viewport visibility, enabled/non-inert state and unobstructed hit targets. Detect dynamic appearances, avoid repeated clicks on continuously present buttons, and cancel observers/timers when disabled or disposed. Keep page processing local and persistence behind the existing storage adapter; use the existing trusted settings messaging and content lifecycle.

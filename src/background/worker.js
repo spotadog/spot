@@ -104,6 +104,11 @@ async function handle(message, sender) {
     try { failed = await broadcast(); } catch { failed = true; }
     return { count: state.scoutData?.records.length ?? 0, warning: failed ? 'Saved, but a page could not refresh. Reload affected webpages.' : '' };
   }
+  if (message.type === 'ads.settings') {
+    await store.saveAdSkip(message.enabled);
+    await broadcast();
+    return true;
+  }
   if (message.type === 'navigation.settings') {
     await store.saveNavigationSettings({ eyeballLevel: message.eyeballLevel, autoPauseColors: message.autoPauseColors });
     await broadcast();

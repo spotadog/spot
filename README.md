@@ -270,3 +270,11 @@ When prompts conflict, later prompts should generally be treated as refinements 
 The [`docs/prompts/`](docs/prompts/) directory exists so that implementation decisions and instructions can be reviewed, reused, audited, and used to help reproduce the project later.
 
 For this reason, new development prompts should continue to be saved in the repository's prompt documentation before implementation begins. Preserve complete prompts rather than storing only summaries so that future developers or coding agents can understand and replay the original instructions.
+
+## Automatically skip ads
+
+In **Settings → Automatic ad skipping**, turn on **Automatically click “Skip this ad”**. It defaults off, saves automatically for all tabs and survives browser restarts. It operates independently of keyword highlighting, location checks and Auto Scroll. Turn it off to cancel pending checks immediately.
+
+On supported HTTP/HTTPS pages, the extension checks for native buttons, button inputs and elements with `role="button"` whose label is exactly “Skip this ad” (case and whitespace ignored). An explicit ARIA label takes precedence over visible button text/input value. It clicks only enabled, visible controls that intersect the viewport and pass a hit test; hidden, inert, disabled, covered and offscreen controls are excluded. Newly inserted controls and controls that become clickable are detected through DOM changes and a 500 ms fallback check. A button that stays clickable is clicked once, then becomes eligible again after an observed disappearance or after toggling the feature off and on.
+
+Checks run locally in visible documents, with no AI or external service calls, added permissions, or persistent page history. The current content-script scope covers the top document, not iframe contents or shadow roots. Sites requiring trusted physical input may ignore the programmatic click. No countdown is bypassed. Manual check: reload `dist/`, enable the setting, test a supported page with a skip button, then disable it and confirm new buttons are left alone.

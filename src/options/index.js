@@ -68,6 +68,8 @@ function renderProvider() {
 }
 async function refresh() {
   state = await request('state.get');
+  $('#auto-skip-ads').checked = state.preferences.autoSkipAds === true;
+  $('#auto-skip-ads').disabled = false;
   // AI/settings refreshes must not replace pending checkbox edits with an older snapshot.
   if (!colorsLoaded) {
     selectedPauseColors = new Set(state.preferences.autoPauseColors);
@@ -146,5 +148,12 @@ action($('#scout-clear'), async () => {
   const result = await request('scout.import', { text: JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), records: [] }) });
   $('#scout-summary').textContent = '0 scout profiles uploaded.';
   report(result.warning || 'Scout profiles cleared.');
+});
+$('#auto-skip-ads').addEventListener('change', async event => {
+  const input = event.target, enabled = input.checked;
+  input.disabled = true;
+  try { await request('ads.settings', { enabled }); report('Automatic ad skipping saved.'); }
+  catch (error) { input.checked = !enabled; report(error); }
+  finally { input.disabled = false; }
 });
 refresh().catch(report);

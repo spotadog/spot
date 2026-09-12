@@ -1,3 +1,4 @@
+import { checkAdSkip } from './ad-skip.mjs';
 import { checkScout } from './scout.mjs';
 import { checkPopups } from './popups.mjs';
 import { checkVisits } from './visits.mjs';
@@ -673,6 +674,7 @@ try {
   await checkAutoScroll(context, criteriaPanel, `http://127.0.0.1:${server.address().port}`);
   await checkPositivePause(context, criteriaPanel, `http://127.0.0.1:${server.address().port}`);
   await checkScout(context, criteriaPanel, `http://127.0.0.1:${server.address().port}`);
+  await checkAdSkip(context, criteriaPanel, `http://127.0.0.1:${server.address().port}`);
   await checkKeywordColors(context, criteriaPanel, id, `http://127.0.0.1:${server.address().port}`);
   const visitedURL = await checkVisits(context, criteriaPanel, id, `http://127.0.0.1:${server.address().port}`);
   await checkPopups(context, criteriaPanel, `http://127.0.0.1:${server.address().port}`);

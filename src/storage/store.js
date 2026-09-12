@@ -58,6 +58,10 @@ export function createStore(area = chrome.storage.local) {
       queue = next.catch(() => {});
       return next;
     },
+    saveAdSkip(enabled) {
+      if (typeof enabled !== 'boolean') throw Error('Invalid automatic ad skip toggle.');
+      return this.update(state => ({ ...state, preferences: { ...state.preferences, autoSkipAds: enabled } }));
+    },
     importScout(text) {
       const data = parseScout(text);
       return this.update(state => ({ ...state, scoutData: data }));
@@ -89,7 +93,7 @@ export function createStore(area = chrome.storage.local) {
   };
 }
 export function scanningState(state) {
-  return { locationCheck: scoutProjection(state), enabled: state.enabled, eyeballLevel: eyeballLevel(state.preferences?.eyeballLevel), autoPauseColors: autoPauseColors(state.preferences?.autoPauseColors), tracking: state.preferences?.tracking === true, profiles: state.profiles.map(({ id, enabled, positiveKeywords, negativeKeywords, rules }) => ({ id, enabled, positiveKeywords, negativeKeywords, rules })) };
+  return { autoSkipAds: state.preferences?.autoSkipAds === true, locationCheck: scoutProjection(state), enabled: state.enabled, eyeballLevel: eyeballLevel(state.preferences?.eyeballLevel), autoPauseColors: autoPauseColors(state.preferences?.autoPauseColors), tracking: state.preferences?.tracking === true, profiles: state.profiles.map(({ id, enabled, positiveKeywords, negativeKeywords, rules }) => ({ id, enabled, positiveKeywords, negativeKeywords, rules })) };
 }
 
 // Runtime records belong to a browser session, never storage.local or profile backups.

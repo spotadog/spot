@@ -305,3 +305,12 @@ Prompt 002 is the repository's only publication workflow: current `main` branch,
 - Limits/issues: historical uploaded evidence, explicit supported author metadata, no live X/manual verification; unsupported author markup is unknown. Limits and replacement semantics documented in README.
 - Publication: existing main, no new branch, prompt 002 SSH identity; fetched without divergence. Invalid GitHub CLI authentication uses the documented repository/commit review-note fallback.
 - Next step: reload dist/, upload the export, save target location with checkbot enabled and enable Pause after positive keyword; verify representative X layouts.
+
+## Automatic ad skipping — prompt 039
+
+- Request: optional automatic clicking of visible, clickable “Skip this ad” buttons; complete prompt saved before implementation.
+- Changes: an off-by-default Settings toggle saves globally through the storage adapter and trusted worker broadcasts. A disposable content controller matches exact normalized labels, validates visibility/enabled state and hit targets, observes dynamic changes, and avoids repeated clicks on continuously eligible buttons. Independent of matching and Auto Scroll; no new permissions, network calls or dependencies.
+- Validation: npm run check passed 166 unit tests, build and full MV3 browser suite; git diff --check passed. Real DOM tests cover appearance changes, disabled/hidden/covered/offscreen/inert controls, reinjection and cancellation. Extension fixture verifies the saved toggle and actual automatic clicks.
+- Limits/issues: top document only; no iframe/shadow-root/restricted-page coverage or trusted physical clicks. No live-site manual verification. README records behavior and manual checks.
+- Publication: existing main, no new branch, existing prompt 002 SSH identity; fetched without divergence. Invalid GitHub CLI authentication uses the documented repository/commit review-note fallback.
+- Next step: reload dist/, enable Settings → Automatic ad skipping and verify representative skip buttons, then disable and confirm new buttons remain untouched.

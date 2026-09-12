@@ -1,3 +1,4 @@
+import { AdSkipper } from '../ads/skip.js';
 import { wirePopups } from './popups.js';
 import { AutoNavigator } from '../navigation/controller.js';
 import { Scanner } from './scanner.js';
@@ -6,6 +7,7 @@ import { persistCountHistory } from './count-history.js';
 const key = '__spotadogContent';
 globalThis[key]?.dispose();
 const popups = wirePopups();
+const adSkipper = new AdSkipper(document, globalThis.__spotadogSkippedAds ??= new Set());
 const scanner = new Scanner(document, persistCountHistory);
 const navigator = new AutoNavigator(window, async (type, payload) => {
   const response = await chrome.runtime.sendMessage({ type, ...payload });
@@ -14,7 +16,7 @@ const navigator = new AutoNavigator(window, async (type, payload) => {
 }, undefined, (colors) => colors === undefined ? scanner.highlighter.positiveRanges : scanner.highlighter.positiveRangesForColors(colors));
 let receivedUpdate = false, disposed = false;
 function update(state) {
-  try { navigator.configure(state); scanner.update(state); return { ok: true }; }
+  try { adSkipper.configure(state.autoSkipAds); navigator.configure(state); scanner.update(state); return { ok: true }; }
   catch { scanner.stop(); return { ok: false }; }
 }
 const listener = (message, sender, respond) => {
@@ -27,6 +29,7 @@ chrome.runtime.onMessage.addListener(listener);
 globalThis[key] = { dispose() {
   disposed = true;
   navigator.dispose();
+  adSkipper.dispose();
   popups.dispose();
   scanner.stop();
   chrome.runtime.onMessage.removeListener(listener);
