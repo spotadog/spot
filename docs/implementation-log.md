@@ -333,3 +333,12 @@ Prompt 002 is the repository's only publication workflow: current `main` branch,
 - Limits/issues: no live served-ad test; existing iframe/shadow-root and main-video heuristic limits remain. Reloading the webpage alone does not load a rebuilt extension.
 - Publication: current main over the existing SSH identity, no branch; fetched without divergence. Invalid GitHub CLI authentication uses the documented repository/commit review-note fallback.
 - Next step: reload the extension at chrome://extensions, refresh the video page and confirm the ad-skip toggle is enabled before checking a live ad.
+
+## Generic video ad-skip support — prompt 042
+
+- Request: use generic naming and cover the additional requested site. Complete prompt preserved before changes.
+- Findings: both reported sites reference the same MGP 9.2.1 player asset. Existing detection has no hostname restriction, so the shared adapter needs no runtime routing change.
+- Changes: generic current documentation and test comments; cross-origin regression coverage for the shared player's readiness/mouseup behavior. Historical prompts retain verbatim requests and source evidence.
+- Validation: npm run check passed 168 unit tests, build and full MV3 browser suite; git diff --check passed. Shared script references inspected; no live served ads tested.
+- Publication: current main via existing SSH identity, no branch; fetched without divergence. Invalid GitHub CLI authentication uses the documented repository/commit review-note fallback.
+- Next step: use Automatically skip video ads across supported players; reload the extension and refresh pages to load the earlier activation fix if needed.

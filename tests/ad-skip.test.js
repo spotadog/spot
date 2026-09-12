@@ -92,15 +92,17 @@ test('ad skipper checks real visibility/hit targets, detects appearance changes 
   assert.equal(await page.evaluate(() => clicks.new), undefined);
 });
 
-test('MGP ad-roll controls wait for skippable state and activate via mouseup rather than click', async t => {
+for (const origin of ['https://video-one.test', 'https://video-two.test']) test(`MGP ad-roll controls wait for readiness and activate via mouseup on ${origin}`, async t => {
   const browser = await chromium.launch({ channel: 'chromium', headless: true }); t.after(() => browser.close());
   const page = await browser.newPage();
   const bundle = await build({ entryPoints: ['src/ads/skip.js'], bundle: true, write: false, format: 'iife', globalName: 'ads' });
-  await page.setContent(`<div class="adRollRunning" style="position:relative;width:800px;height:450px">
+  const html = `<div class="adRollRunning" style="position:relative;width:800px;height:450px">
     <video muted playsinline style="width:800px;height:450px"></video>
     <div class="adRollContainer" style="position:absolute;inset:0">
       <div class="adRollSkipButton" style="position:absolute;bottom:20px;right:20px;background:white;padding:10px;cursor:pointer"><div class="adRollSkipButtonContent">Skip Ad</div></div>
-    </div></div>`);
+    </div></div>`;
+  await page.route(`${origin}/**`, route => route.fulfill({ contentType: 'text/html', body: html }));
+  await page.goto(`${origin}/watch`);
   await page.addScriptTag({ content: bundle.outputFiles[0].text });
   await page.evaluate(async () => {
     const canvas = document.createElement('canvas'); canvas.width = 800; canvas.height = 450;

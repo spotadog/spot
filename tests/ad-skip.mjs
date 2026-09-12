@@ -15,7 +15,7 @@ export async function checkAdSkip(context, panel, origin) {
   await site.waitForFunction(() => clicks === 1);
   await site.waitForTimeout(600);
   assert.equal(await site.evaluate(() => clicks), 1);
-  // MGP/YouPorn uses a custom ready-state control whose desktop action is mouseup.
+  // MGP uses a custom ready-state control whose desktop action is mouseup.
   await site.evaluate(() => {
     const old = document.querySelector('#skip'); old.hidden = true;
     old.parentElement.classList.add('adRollRunning');
