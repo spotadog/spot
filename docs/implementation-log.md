@@ -342,3 +342,13 @@ Prompt 002 is the repository's only publication workflow: current `main` branch,
 - Validation: npm run check passed 168 unit tests, build and full MV3 browser suite; git diff --check passed. Shared script references inspected; no live served ads tested.
 - Publication: current main via existing SSH identity, no branch; fetched without divergence. Invalid GitHub CLI authentication uses the documented repository/commit review-note fallback.
 - Next step: use Automatically skip video ads across supported players; reload the extension and refresh pages to load the earlier activation fix if needed.
+
+## Rendered ad-player selector correction — prompt 043
+
+- Request: skip action still failed on the supplied exact page. Full report saved before implementation.
+- Investigation: the page loaded its MGP player in Chromium but showed an age-verification dialog, preventing live ad verification. Its linked player code prefixes both template and dynamic classes with mgp_. The earlier adapter and fixtures incorrectly used raw template classes.
+- Fix: shared rendered control/readiness/container/running selectors now drive both eligibility and mouseup activation. Corrected the cross-origin and MV3 fixtures to use actual rendered classes. No broader matching or video-gate changes.
+- Validation: the corrected regression fixtures failed before the implementation fix and passed afterward. npm run check passed 168 unit tests, build and the full MV3 browser suite; git diff --check passed.
+- Limits/issues: prior tests modeled template rather than runtime markup; that gap is corrected. Live served-ad behavior remains unverified behind the test browser's age-verification dialog.
+- Publication: current main, existing SSH identity, no new branch; fetched without divergence. Invalid GitHub CLI authentication uses the documented repository/commit review-note fallback.
+- Next step: reload the extension and refresh the video page with automatic video ad skipping enabled.

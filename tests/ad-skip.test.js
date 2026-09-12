@@ -96,10 +96,10 @@ for (const origin of ['https://video-one.test', 'https://video-two.test']) test(
   const browser = await chromium.launch({ channel: 'chromium', headless: true }); t.after(() => browser.close());
   const page = await browser.newPage();
   const bundle = await build({ entryPoints: ['src/ads/skip.js'], bundle: true, write: false, format: 'iife', globalName: 'ads' });
-  const html = `<div class="adRollRunning" style="position:relative;width:800px;height:450px">
+  const html = `<div class="mgp_adRollRunning" style="position:relative;width:800px;height:450px">
     <video muted playsinline style="width:800px;height:450px"></video>
-    <div class="adRollContainer" style="position:absolute;inset:0">
-      <div class="adRollSkipButton" style="position:absolute;bottom:20px;right:20px;background:white;padding:10px;cursor:pointer"><div class="adRollSkipButtonContent">Skip Ad</div></div>
+    <div class="mgp_adRollContainer" style="position:absolute;inset:0">
+      <div class="mgp_adRollSkipButton" style="position:absolute;bottom:20px;right:20px;background:white;padding:10px;cursor:pointer"><div class="mgp_adRollSkipButtonContent">Skip Ad</div></div>
     </div></div>`;
   await page.route(`${origin}/**`, route => route.fulfill({ contentType: 'text/html', body: html }));
   await page.goto(`${origin}/watch`);
@@ -109,27 +109,27 @@ for (const origin of ['https://video-one.test', 'https://video-two.test']) test(
     window.paint = setInterval(() => canvas.getContext('2d').fillRect(0, 0, 800, 450), 30);
     const video = document.querySelector('video'); video.srcObject = canvas.captureStream(30); await video.play();
     window.skips = 0; window.mouseups = 0; window.clickEvents = 0;
-    const control = document.querySelector('.adRollSkipButton');
+    const control = document.querySelector('.mgp_adRollSkipButton');
     // MGP's desktop adapter stops click; its action callback runs on mouseup.
     control.addEventListener('click', event => { clickEvents++; event.stopPropagation(); event.preventDefault(); });
     control.addEventListener('mouseup', event => {
       if (event.button !== 0) return;
       event.stopPropagation(); event.preventDefault(); mouseups++;
-      if (control.classList.contains('skippable')) skips++;
+      if (control.classList.contains('mgp_skippable')) skips++;
     });
     window.skipper = new ads.AdSkipper(document);
   });
   await page.waitForFunction(() => document.querySelector('video').currentTime > 0);
   await page.evaluate(() => { skipper.configure(true); skipper.scan(); });
   assert.deepEqual(await page.evaluate(() => ({ skips, mouseups, clickEvents })), { skips: 0, mouseups: 0, clickEvents: 0 });
-  await page.evaluate(() => { document.querySelector('.adRollSkipButton').classList.add('skippable'); skipper.scan(); skipper.scan(); });
+  await page.evaluate(() => { document.querySelector('.mgp_adRollSkipButton').classList.add('mgp_skippable'); skipper.scan(); skipper.scan(); });
   assert.deepEqual(await page.evaluate(() => ({ skips, mouseups, clickEvents })), { skips: 1, mouseups: 1, clickEvents: 0 });
   // A reused control must wait through the next countdown before skipping again.
-  await page.evaluate(() => { document.querySelector('.adRollSkipButton').classList.remove('skippable'); skipper.scan(); });
-  await page.evaluate(() => { document.querySelector('.adRollSkipButton').classList.add('skippable'); skipper.scan(); });
+  await page.evaluate(() => { document.querySelector('.mgp_adRollSkipButton').classList.remove('mgp_skippable'); skipper.scan(); });
+  await page.evaluate(() => { document.querySelector('.mgp_adRollSkipButton').classList.add('mgp_skippable'); skipper.scan(); });
   assert.equal(await page.evaluate(() => skips), 2);
-  await page.evaluate(() => { document.querySelector('video').pause(); document.querySelector('.adRollSkipButton').classList.remove('skippable'); skipper.scan(); });
-  await page.evaluate(() => { document.querySelector('.adRollSkipButton').classList.add('skippable'); skipper.scan(); });
+  await page.evaluate(() => { document.querySelector('video').pause(); document.querySelector('.mgp_adRollSkipButton').classList.remove('mgp_skippable'); skipper.scan(); });
+  await page.evaluate(() => { document.querySelector('.mgp_adRollSkipButton').classList.add('mgp_skippable'); skipper.scan(); });
   assert.equal(await page.evaluate(() => skips), 2);
   await page.evaluate(() => skipper.dispose());
 });

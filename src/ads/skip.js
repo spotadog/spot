@@ -1,4 +1,6 @@
 const SELECTOR = 'button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], [class*="skip" i], [id*="skip" i], [data-testid*="skip" i]';
+// MGP prefixes both template classes and classes added by its readiness helper.
+const AD_ROLL = { control: '.mgp_adRollSkipButton', ready: '.mgp_skippable', container: '.mgp_adRollContainer', running: '.mgp_adRollRunning' };
 const normalize = value => typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').toLowerCase() : '';
 export function skipLabel(value) {
   return /^skip (?:this |the |all )?(?:ads?|adverts?|advertisements?|commercials?)(?: now)?[.!»›→\s]*$/.test(normalize(value));
@@ -47,8 +49,8 @@ function matchingControl(node, doc, player) {
 export function clickableSkip(node, doc, video = mainPlayingVideo(doc)) {
   if (!video || !node.isConnected || !node.matches(SELECTOR)) return false;
   // MGP exposes a separate readiness class; its label can update after readiness.
-  const adRollControl = node.closest('.adRollSkipButton');
-  if (adRollControl && (adRollControl !== node || !node.matches('.skippable') || !node.closest('.adRollContainer') || !node.closest('.adRollRunning'))) return false;
+  const adRollControl = node.closest(AD_ROLL.control);
+  if (adRollControl && (adRollControl !== node || !node.matches(AD_ROLL.ready) || !node.closest(AD_ROLL.container) || !node.closest(AD_ROLL.running))) return false;
   const player = playerFor(video, node, doc);
   if (!player || !matchingControl(node, doc, player)) return false;
   if (node.matches(':disabled') || node.closest('[inert], [aria-disabled="true"], [hidden]') || !visibleRect(node, doc)) return false;
@@ -69,7 +71,7 @@ function hitPoint(node, doc) {
   return null;
 }
 function activateSkip(node, doc) {
-  if (node.matches('.adRollSkipButton.skippable')) {
+  if (node.matches(AD_ROLL.control) && node.matches(AD_ROLL.ready)) {
     // MGP's desktop control handles mouseup; click only cancels propagation.
     // Dispatch only its activation event, avoiding two actions on generic controls.
     const point = hitPoint(node, doc);

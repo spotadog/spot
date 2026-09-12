@@ -212,8 +212,12 @@ Supersedes prompt 039's exact-label-only behavior. Require a prominent visible m
 
 ## MGP ad-roll compatibility — prompt 041
 
-For an MGP adRollSkipButton, require its skippable readiness class and active adRollContainer/adRollRunning ancestry in addition to existing playback, player association and hit testing. Activate its desktop mouseup handler once; do not issue an additional click. Do not activate the nested label separately. Countdown/readiness loss rearms a reused control only after it is eligible again. Generic controls retain normal click activation.
+For a rendered MGP mgp_adRollSkipButton, require its mgp_skippable readiness class and active mgp_adRollContainer/mgp_adRollRunning ancestry in addition to existing playback, player association and hit testing. Activate its desktop mouseup handler once; do not issue an additional click. Do not activate the nested label separately. Countdown/readiness loss rearms a reused control only after it is eligible again. Generic controls retain normal click activation.
 
 ## Generic player naming and shared-site support — prompt 042
 
 Describe the feature as automatic video ad skipping. Player adapters must match supported markup/readiness and behavior without hostname restrictions. Shared-player compatibility applies across sites using the same supported player; keep site-specific source evidence in prompt history rather than product naming. Validate the adapter on distinct synthetic origins without contacting live ad services.
+
+## Rendered player class compatibility — prompt 043
+
+Use rendered player class names, including the mgp_ prefix applied to template and dynamic readiness classes. The mouseup adapter must recognize these classes consistently during candidate filtering and activation. Regression fixtures must model rendered markup, not unprocessed source templates. Preserve main-video gating, readiness, visibility and one activation per observed eligible appearance.

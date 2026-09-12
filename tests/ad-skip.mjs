@@ -18,16 +18,16 @@ export async function checkAdSkip(context, panel, origin) {
   // MGP uses a custom ready-state control whose desktop action is mouseup.
   await site.evaluate(() => {
     const old = document.querySelector('#skip'); old.hidden = true;
-    old.parentElement.classList.add('adRollRunning');
-    old.insertAdjacentHTML('afterend', '<div class="adRollContainer" style="position:absolute;inset:0"><div class="adRollSkipButton" style="position:absolute;right:20px;bottom:20px;background:white;padding:10px"><div class="adRollSkipButtonContent">Skip Ad</div></div></div>');
+    old.parentElement.classList.add('mgp_adRollRunning');
+    old.insertAdjacentHTML('afterend', '<div class="mgp_adRollContainer" style="position:absolute;inset:0"><div class="mgp_adRollSkipButton" style="position:absolute;right:20px;bottom:20px;background:white;padding:10px"><div class="mgp_adRollSkipButtonContent">Skip Ad</div></div></div>');
     window.mgpSkips = 0;
-    const control = document.querySelector('.adRollSkipButton');
+    const control = document.querySelector('.mgp_adRollSkipButton');
     control.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); });
-    control.addEventListener('mouseup', () => { if (control.classList.contains('skippable')) mgpSkips++; });
+    control.addEventListener('mouseup', () => { if (control.classList.contains('mgp_skippable')) mgpSkips++; });
   });
   await site.waitForTimeout(600);
   assert.equal(await site.evaluate(() => mgpSkips), 0);
-  await site.evaluate(() => document.querySelector('.adRollSkipButton').classList.add('skippable'));
+  await site.evaluate(() => document.querySelector('.mgp_adRollSkipButton').classList.add('mgp_skippable'));
   await site.waitForFunction(() => mgpSkips === 1);
   await site.waitForTimeout(600);
   assert.equal(await site.evaluate(() => mgpSkips), 1);
