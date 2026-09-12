@@ -314,3 +314,12 @@ Prompt 002 is the repository's only publication workflow: current `main` branch,
 - Limits/issues: top document only; no iframe/shadow-root/restricted-page coverage or trusted physical clicks. No live-site manual verification. README records behavior and manual checks.
 - Publication: existing main, no new branch, existing prompt 002 SSH identity; fetched without divergence. Invalid GitHub CLI authentication uses the documented repository/commit review-note fallback.
 - Next step: reload dist/, enable Settings → Automatic ad skipping and verify representative skip buttons, then disable and confirm new buttons remain untouched.
+
+## Video-aware ad skip matching — prompt 040
+
+- Request: fix narrow cross-site matching and first check for video playing as main content. Original wording saved before implementation.
+- Changes: prominent main-video playback gate, nearby shared-player association, broader ad-skip labels and custom controls, contextual bare Skip support, countdown/unrelated-skip exclusion and nested-candidate deduplication. Retained toggle persistence, local-only processing and visibility/hit testing; renamed the Settings control for clarity.
+- Validation: npm run check passed 166 unit tests, build and full MV3 suite. Real media fixtures exercise playing/paused/hidden video, sidebar preview exclusion, custom controls, broader labels, off-player skips and toggle lifecycle. git diff --check passed.
+- Limits/issues: no affected URL provided; live-site behavior unverified. Main-content/player scope uses documented size/geometry heuristics; iframe/shadow-root and trusted-input-only limitations remain.
+- Publication: current main over the existing SSH identity, no branch; origin fetched without divergence. Invalid GitHub CLI authentication uses the repository/commit review-note fallback.
+- Next step: reload dist/, refresh the video page, enable Automatically skip video ads and test main-video playback; provide a failing URL for site-specific follow-up.

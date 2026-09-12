@@ -205,3 +205,7 @@ An optional global location check must gate positive keyword/color auto-pauses u
 ## Automatic ad skipping — prompt 039
 
 Provide a persisted on/off setting, initially off, to click visible and clickable “Skip this ad” buttons automatically. Require exact normalized button labels, viewport visibility, enabled/non-inert state and unobstructed hit targets. Detect dynamic appearances, avoid repeated clicks on continuously present buttons, and cancel observers/timers when disabled or disposed. Keep page processing local and persistence behind the existing storage adapter; use the existing trusted settings messaging and content lifecycle.
+
+## Video-aware ad skip matching — prompt 040
+
+Supersedes prompt 039's exact-label-only behavior. Require a prominent visible main video with active playback before matching controls associated with its player. Support common ad-skip phrases and custom ad-skip identifiers, including bare Skip only with explicit ad context. Exclude unrelated skip actions, countdowns, off-player controls, paused/hidden videos and small previews. Retain the persisted toggle, visibility/hit testing, duplicate protection and lifecycle cleanup. Document the main-video and player-association heuristics.

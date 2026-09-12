@@ -125,4 +125,4 @@ Settings accepts version-1 X Profile Scout JSON and a target account location. A
 
 ## Automatic ad skipping
 
-An off-by-default Settings toggle automatically saves across all tabs and restarts. When enabled, visible, enabled and unobstructed “Skip this ad” buttons are clicked once per observed clickable appearance. DOM observation and periodic checks cover dynamic buttons; disabling cancels pending work. Independent of matching and Auto Scroll. See [README](../README.md#automatically-skip-ads) for labels, lifecycle and supported-page limits.
+An off-by-default Settings toggle automatically saves across all tabs and restarts. When enabled, a prominent main video must be playing before nearby player controls are considered. Broader ad-skip phrases and supported custom controls are matched; unrelated skips and countdowns are excluded. Visible, enabled and unobstructed controls are clicked once per observed clickable appearance. DOM observation and periodic checks cover dynamic buttons; disabling cancels pending work. Independent of matching and Auto Scroll. See [README](../README.md#automatically-skip-ads) for labels, lifecycle and supported-page limits.
